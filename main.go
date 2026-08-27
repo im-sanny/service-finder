@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 )
 
 type Service struct {
@@ -49,11 +50,34 @@ func GetServices(w http.ResponseWriter, r *http.Request) { // take req and write
 	}
 }
 
+func ServiceId(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	// first get id, it'll come as string so need to convert it into int, then run loop in-memory db to get matching id, set header, content type encode the response and show the result
+	idStr := r.PathValue("id")     // collect string id from request
+	id, err := strconv.Atoi(idStr) // convert string id to int
+	if err != nil {
+		http.Error(w, "Invalid ID", http.StatusBadRequest)
+		return
+	}
+
+	for _, v := range services { // run loop to check each service
+		if id == v.ID { // if requested ID matches this service ID then
+			w.Header().Set("Content-Type", "application/json") // set response content type to json
+			json.NewEncoder(w).Encode(v)                       // then encode the response and return the response
+			return
+		}
+	}
+}
+
 func main() {
 	mux := http.NewServeMux()
 
 	// service routes
 	mux.HandleFunc("/service", GetServices)
+	mux.HandleFunc("/service/{id}", ServiceId)
 
 	fmt.Printf("Server running on port :8080")
 	http.ListenAndServe(":8080", mux)
