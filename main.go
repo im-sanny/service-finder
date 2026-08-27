@@ -37,7 +37,7 @@ var providers = []Provider{
 	{ID: 5, Name: "David Wilson", Phone: 5678901234, Location: "Phoenix, AZ", Description: "Carpentry and custom woodworking"},
 }
 
-func GetServices(w http.ResponseWriter, r *http.Request) { // take req and write response
+func ServiceGet(w http.ResponseWriter, r *http.Request) { // take req and write response
 	w.Header().Set("Content-Type", "application/json") // this will set header and content type as json
 	if r.Method != http.MethodGet {                    // if the req method does't match then send error
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -72,12 +72,34 @@ func ServiceId(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func ServicePost(w http.ResponseWriter, r *http.Request) {
+	//by using this func we'll send data in-memory db, and that will stay stored until the i stop the server
+	w.Header().Set("Content-Type", "application/json") // response will be set to json while taking data from output
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var s Service                                              // now s will take all the fields of Service
+	if err := json.NewDecoder(r.Body).Decode(&s); err != nil { // this will decode body to ?
+		http.Error(w, "Failed to decode", http.StatusBadRequest)
+		return
+	}
+	newId := len(services) + 1     // creating a new id
+	s.ID = newId                   // this is how we'll add new id for newly added data
+	services = append(services, s) // now data will be added in the service
+
+	w.WriteHeader(http.StatusCreated) // success status code upon successful entry
+	json.NewEncoder(w).Encode(s)      // data will be encoded before sending response
+}
+
 func main() {
 	mux := http.NewServeMux()
 
 	// service routes
-	mux.HandleFunc("/service", GetServices)
+	mux.HandleFunc("/service", ServiceGet)
 	mux.HandleFunc("/service/{id}", ServiceId)
+	mux.HandleFunc("/service", ServicePost)
 
 	fmt.Printf("Server running on port :8080")
 	http.ListenAndServe(":8080", mux)
