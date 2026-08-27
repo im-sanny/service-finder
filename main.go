@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 )
@@ -35,8 +36,24 @@ var providers = []Provider{
 	{ID: 5, Name: "David Wilson", Phone: 5678901234, Location: "Phoenix, AZ", Description: "Carpentry and custom woodworking"},
 }
 
+func GetServices(w http.ResponseWriter, r *http.Request) { // take req and write response
+	w.Header().Set("Content-Type", "application/json") // this will set header and content type as json
+	if r.Method != http.MethodGet {                    // if the req method does't match then send error
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// encode services into json and give that as response, data isn't coming in json that's why it needs to be encoded
+	if err := json.NewEncoder(w).Encode(services); err != nil { // if encoding/writing fails this will send a error
+		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+	}
+}
+
 func main() {
 	mux := http.NewServeMux()
+
+	// service routes
+	mux.HandleFunc("/service", GetServices)
 
 	fmt.Printf("Server running on port :8080")
 	http.ListenAndServe(":8080", mux)
