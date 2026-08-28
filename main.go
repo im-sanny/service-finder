@@ -124,6 +124,41 @@ func ServiceUpdate(w http.ResponseWriter, r *http.Request) {
 	http.Error(w, "Service not found", http.StatusNotFound)
 }
 
+func ServicePatch(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	if r.Method != http.MethodPatch {
+		http.Error(w, "Invalid method", http.StatusMethodNotAllowed)
+		return
+	}
+
+	idStr := r.PathValue("id")
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		http.Error(w, "Invalid id", http.StatusBadRequest)
+		return
+	}
+
+	var s Service
+	if err := json.NewDecoder(r.Body).Decode(&s); err != nil {
+		http.Error(w, "Failed to decode", http.StatusBadRequest)
+		return
+	}
+
+	for i := range services { // loop over range of services for index of services
+		if services[i].ID == id { // if services index id == id then
+			if s.Name != "" { // if s.name isn't empty
+				services[i].Name = s.Name // then update the existing service's Name with the new Name.
+			}
+			if s.Category != "" {
+				services[i].Category = s.Category
+			}
+			json.NewEncoder(w).Encode(services[i]) // encode whatever service got by index then return it
+			return
+		}
+	}
+	http.Error(w, "Service not found", http.StatusNotFound)
+}
+
 func main() {
 	mux := http.NewServeMux()
 
@@ -132,6 +167,7 @@ func main() {
 	mux.HandleFunc("GET /service/{id}", ServiceId)
 	mux.HandleFunc("POST /service", ServicePost)
 	mux.HandleFunc("PUT /service/{id}", ServiceUpdate)
+	mux.HandleFunc("PATCH /service/{id}", ServicePatch)
 
 	fmt.Printf("Server running on port :8080")
 	http.ListenAndServe(":8080", mux)
