@@ -73,33 +73,65 @@ func ServiceId(w http.ResponseWriter, r *http.Request) {
 }
 
 func ServicePost(w http.ResponseWriter, r *http.Request) {
-	//by using this func we'll send data in-memory db, and that will stay stored until the i stop the server
+	// client send new service data as JSON in the request body
 	w.Header().Set("Content-Type", "application/json") // response will be set to json while taking data from output
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	var s Service                                              // now s will take all the fields of Service
-	if err := json.NewDecoder(r.Body).Decode(&s); err != nil { // this will decode body to ?
+	var s Service                                              // this will create an empty service variable
+	if err := json.NewDecoder(r.Body).Decode(&s); err != nil { // decode the JSON request body into the service variable body
 		http.Error(w, "Failed to decode", http.StatusBadRequest)
 		return
 	}
-	newId := len(services) + 1     // creating a new id
-	s.ID = newId                   // this is how we'll add new id for newly added data
-	services = append(services, s) // now data will be added in the service
+	newId := len(services) + 1     // creating new id
+	s.ID = newId                   // assigning new id to new service
+	services = append(services, s) // appending new service to the in-memory services slice
 
-	w.WriteHeader(http.StatusCreated) // success status code upon successful entry
-	json.NewEncoder(w).Encode(s)      // data will be encoded before sending response
+	w.WriteHeader(http.StatusCreated) // set the success status 201 created
+	json.NewEncoder(w).Encode(s)      // encode the created service as JSON and send it back
+}
+
+func ServiceUpdate(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	if r.Method != http.MethodPut {
+		http.Error(w, "Invalid method", http.StatusMethodNotAllowed)
+		return
+	}
+
+	idStr := r.PathValue("id")
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		http.Error(w, "Invalid id", http.StatusBadRequest)
+		return
+	}
+
+	var s Service
+	if err := json.NewDecoder(r.Body).Decode(&s); err != nil {
+		http.Error(w, "Failed to decode", http.StatusBadRequest)
+		return
+	}
+
+	for i := range services {
+		if services[i].ID == id { // if the id we got is == to services slice id then
+			s.ID = id                    // empty service variable id = id that we got through request
+			services[i] = s              // replace the existing service at this index with the new data stored in s.
+			json.NewEncoder(w).Encode(s) // encode and return the data that service variable got
+			return
+		}
+	}
+	http.Error(w, "Service not found", http.StatusNotFound)
 }
 
 func main() {
 	mux := http.NewServeMux()
 
 	// service routes
-	mux.HandleFunc("/service", ServiceGet)
-	mux.HandleFunc("/service/{id}", ServiceId)
-	mux.HandleFunc("/service", ServicePost)
+	mux.HandleFunc("GET /service", ServiceGet)
+	mux.HandleFunc("GET /service/{id}", ServiceId)
+	mux.HandleFunc("POST /service", ServicePost)
+	mux.HandleFunc("PUT /service/{id}", ServiceUpdate)
 
 	fmt.Printf("Server running on port :8080")
 	http.ListenAndServe(":8080", mux)
