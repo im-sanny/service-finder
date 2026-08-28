@@ -159,6 +159,31 @@ func ServicePatch(w http.ResponseWriter, r *http.Request) {
 	http.Error(w, "Service not found", http.StatusNotFound)
 }
 
+func ServiceDelete(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	if r.Method != http.MethodDelete {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	idStr := r.PathValue("id")
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		http.Error(w, "Invalid id", http.StatusBadRequest)
+		return
+	}
+
+	// if the id matched with index id then exclude that from the slice
+	for i := range services {
+		if services[i].ID == id {
+			services = append(services[:i], services[i+1:]...) // services[:i] means everything before index i, services[i+1:] means everything after index i
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+	}
+	http.Error(w, "Service not found", http.StatusNotFound)
+}
+
 func main() {
 	mux := http.NewServeMux()
 
@@ -168,6 +193,7 @@ func main() {
 	mux.HandleFunc("POST /service", ServicePost)
 	mux.HandleFunc("PUT /service/{id}", ServiceUpdate)
 	mux.HandleFunc("PATCH /service/{id}", ServicePatch)
+	mux.HandleFunc("DELETE /service/{id}", ServiceDelete)
 
 	fmt.Printf("Server running on port :8080")
 	http.ListenAndServe(":8080", mux)
