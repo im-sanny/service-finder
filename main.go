@@ -1,10 +1,13 @@
 package main
 
 import (
+	"database/sql"
 	"encoding/json"
-	"fmt"
+	"log"
 	"net/http"
 	"strconv"
+
+	_ "github.com/lib/pq"
 )
 
 type Service struct {
@@ -185,6 +188,17 @@ func ServiceDelete(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+	var err error
+	conStr := "postgres://postgres:360420@localhost:5432/serfin?sslmode=disable"
+	db, err := sql.Open("postgres", conStr)
+	if err != nil {
+		log.Fatal(err)
+	}
+	if err = db.Ping(); err != nil {
+		log.Fatal(err)
+	}
+	log.Println("Database connected successfully!")
+
 	mux := http.NewServeMux()
 
 	// service routes
@@ -195,6 +209,6 @@ func main() {
 	mux.HandleFunc("PATCH /service/{id}", ServicePatch)
 	mux.HandleFunc("DELETE /service/{id}", ServiceDelete)
 
-	fmt.Printf("Server running on port :8080")
-	http.ListenAndServe(":8080", mux)
+	log.Println("Server running on port :8080")
+	log.Fatal(http.ListenAndServe(":8080", mux))
 }
