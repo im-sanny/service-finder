@@ -186,6 +186,34 @@ func ServicePatch(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(s)
 }
 
+func ServiceDelete(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodDelete {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	idStr := r.PathValue("id")
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		http.Error(w, "Invalid ID", http.StatusBadRequest)
+		return
+	}
+
+	var deletedId int
+	err = db.QueryRow(`DELETE FROM services WHERE id=$1 RETURNING id`, id).Scan(&deletedId)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			http.Error(w, "Service not found", http.StatusNotFound)
+			return
+		}
+		http.Error(w, "Failed to delete service", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusNoContent)
+}
+
 func main() {
 	var err error
 	conStr := "postgres://postgres:360420@localhost:5432/serfin?sslmode=disable"
@@ -207,6 +235,7 @@ func main() {
 	mux.HandleFunc("GET /service/{id}", ServiceId)
 	mux.HandleFunc("PUT /service/{id}", ServicePut)
 	mux.HandleFunc("PATCH /service/{id}", ServicePatch)
+	mux.HandleFunc("DELETE /service/{id}", ServiceDelete)
 
 	log.Println("Server running on port :8080")
 	log.Fatal(http.ListenAndServe(":8080", mux))
