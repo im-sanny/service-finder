@@ -42,7 +42,7 @@ func ServicePost(w http.ResponseWriter, r *http.Request) {
 		INSERT INTO services (name, description)
 		VALUES ($1, $2)
 		RETURNING id`,
-		s.Name, s.Description).Scan(&s.ID)
+		s.Name, s.Description).Scan(&s.ID) // The & means you're giving Scan the memory addresses where it should put the values.
 
 	if err != nil {
 		http.Error(w, "Failed to insert service", http.StatusInternalServerError)
@@ -52,6 +52,37 @@ func ServicePost(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(s)
+}
+
+func ServiceGet(w http.ResponseWriter, r *http.Request) { // r request for data and w writes or provide that data
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	rows, err := db.Query(`SELECT id, name, description FROM services;`)
+	if err != nil {
+		http.Error(w, "Database query failed", http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close() // why?
+
+	services := make([]Service, 0)
+	for rows.Next() {
+		var s Service
+		if err := rows.Scan(&s.ID, &s.Name, &s.Description); err != nil {
+			http.Error(w, "Failed to scan row", http.StatusInternalServerError)
+			return
+		}
+		services = append(services, s)
+	}
+
+	if err = rows.Err(); err != nil {
+		http.Error(w, "Row iteration error", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(services)
 }
 
 func main() {
@@ -71,6 +102,7 @@ func main() {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("POST /service", ServicePost)
+	mux.HandleFunc("GET /service", ServiceGet)
 
 	log.Println("Server running on port :8080")
 	log.Fatal(http.ListenAndServe(":8080", mux))
