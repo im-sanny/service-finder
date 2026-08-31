@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"strconv"
 
 	_ "github.com/lib/pq"
 )
@@ -85,6 +86,30 @@ func ServiceGet(w http.ResponseWriter, r *http.Request) { // r request for data 
 	json.NewEncoder(w).Encode(services)
 }
 
+func ServiceId(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusBadRequest)
+		return
+	}
+
+	idStr := r.PathValue("id")
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		http.Error(w, "Invalid ID", http.StatusBadRequest)
+		return
+	}
+
+	var s Service
+	err = db.QueryRow(`SELECT id, name, description, FROM services WHERE id=$1;`, id).Scan(&s.ID, &s.Name, &s.Description)
+	if err != nil {
+		http.Error(w, "Database query failed", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(s)
+}
+
 func main() {
 	var err error
 	conStr := "postgres://postgres:360420@localhost:5432/serfin?sslmode=disable"
@@ -103,6 +128,7 @@ func main() {
 
 	mux.HandleFunc("POST /service", ServicePost)
 	mux.HandleFunc("GET /service", ServiceGet)
+	mux.HandleFunc("GET /service/{id}", ServiceId)
 
 	log.Println("Server running on port :8080")
 	log.Fatal(http.ListenAndServe(":8080", mux))
