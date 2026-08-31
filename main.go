@@ -146,6 +146,46 @@ func ServicePut(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(s)
 }
 
+func ServicePatch(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPatch {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	idStr := r.PathValue("id")
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		http.Error(w, "Invalid ID", http.StatusBadRequest)
+		return
+	}
+
+	var s Service
+	if err := json.NewDecoder(r.Body).Decode(&s); err != nil {
+		http.Error(w, "Failed to decode JSON", http.StatusBadRequest)
+		return
+	}
+
+	err = db.QueryRow(`
+	UPDATE services
+	SET name=COALESCE($1, name),
+	description=COALESCE($2, description)
+	WHERE id=$3
+	RETURNING id, name, description`, // why i need to return these for patch when i don't need it for update?
+		s.Name, s.Description, id).Scan(&s.ID, &s.Name, &s.Description)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			http.Error(w, "Service not found", http.StatusNotFound)
+			return
+		}
+		http.Error(w, "Failed to patch service", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(s)
+}
+
 func main() {
 	var err error
 	conStr := "postgres://postgres:360420@localhost:5432/serfin?sslmode=disable"
@@ -166,6 +206,7 @@ func main() {
 	mux.HandleFunc("GET /service", ServiceGet)
 	mux.HandleFunc("GET /service/{id}", ServiceId)
 	mux.HandleFunc("PUT /service/{id}", ServicePut)
+	mux.HandleFunc("PATCH /service/{id}", ServicePatch)
 
 	log.Println("Server running on port :8080")
 	log.Fatal(http.ListenAndServe(":8080", mux))
