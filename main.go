@@ -110,6 +110,42 @@ func ServiceId(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(s)
 }
 
+func ServicePut(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPut {
+		http.Error(w, "Method not allowed", http.StatusBadRequest)
+		return
+	}
+
+	idStr := r.PathValue("id")
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		http.Error(w, "Invalid ID", http.StatusBadRequest)
+		return
+	}
+
+	var s Service
+	if err := json.NewDecoder(r.Body).Decode(&s); err != nil {
+		http.Error(w, "Failed to decode JSON", http.StatusBadRequest)
+		return
+	}
+
+	err = db.QueryRow(`
+	UPDATE services
+	SET name=$1, description=$2, WHERE id=$3`,
+		s.Name, s.Description, id).Scan(&s.ID, &s.Name, &s.Description)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			http.Error(w, "Service not found", http.StatusNotFound)
+			return
+		}
+		http.Error(w, "Failed to update service", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(s)
+}
+
 func main() {
 	var err error
 	conStr := "postgres://postgres:360420@localhost:5432/serfin?sslmode=disable"
@@ -129,6 +165,7 @@ func main() {
 	mux.HandleFunc("POST /service", ServicePost)
 	mux.HandleFunc("GET /service", ServiceGet)
 	mux.HandleFunc("GET /service/{id}", ServiceId)
+	mux.HandleFunc("PUT /service/{id}", ServicePut)
 
 	log.Println("Server running on port :8080")
 	log.Fatal(http.ListenAndServe(":8080", mux))
