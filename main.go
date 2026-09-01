@@ -214,6 +214,29 @@ func ServiceDelete(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+func ProviderPost(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var p Provider
+	if err := json.NewDecoder(r.Body).Decode(&p); err != nil {
+		http.Error(w, "Failed to decode JSON", http.StatusBadRequest)
+		return
+	}
+	err := db.QueryRow(`INSERT INTO providers (name, phone, location, description, service_id) VALUES($1, $2, $3, $4, $5) RETURNING id`, p.Name, p.Phone, p.Location, p.Description, p.ServiceID).Scan(&p.ID)
+
+	if err != nil {
+		http.Error(w, "Failed to insert service", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(p)
+}
+
 func main() {
 	var err error
 	conStr := "postgres://postgres:360420@localhost:5432/serfin?sslmode=disable"
@@ -236,6 +259,8 @@ func main() {
 	mux.HandleFunc("PUT /service/{id}", ServicePut)
 	mux.HandleFunc("PATCH /service/{id}", ServicePatch)
 	mux.HandleFunc("DELETE /service/{id}", ServiceDelete)
+
+	mux.HandleFunc("POST /provider", ProviderGet)
 
 	log.Println("Server running on port :8080")
 	log.Fatal(http.ListenAndServe(":8080", mux))
