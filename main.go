@@ -264,6 +264,29 @@ func ProviderGet(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(provider)
 
 }
+func ProviderID(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusBadRequest)
+		return
+	}
+
+	idStr := r.PathValue("id")
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		http.Error(w, "Invalid ID", http.StatusBadRequest)
+		return
+	}
+
+	var p Provider
+	err = db.QueryRow(`SELECT id, name, phone, location, description, service_id FROM providers WHERE id=$1`, id).Scan(&p.ID, &p.Name, &p.Phone, &p.Description, &p.ServiceID)
+	if err != nil {
+		http.Error(w, "Database query failed", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(p)
+}
 
 func main() {
 	var err error
@@ -290,6 +313,7 @@ func main() {
 
 	mux.HandleFunc("POST /provider", ProviderPost)
 	mux.HandleFunc("GET /provider", ProviderGet)
+	mux.HandleFunc("GET /provider/{id}", ProviderID)
 
 	log.Println("Server running on port :8080")
 	log.Fatal(http.ListenAndServe(":8080", mux))
