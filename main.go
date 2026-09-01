@@ -236,6 +236,34 @@ func ProviderPost(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(p)
 }
+func ProviderGet(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	rows, err := db.Query(`SELECT name, phone, location, description, service_id  FROM providers`)
+	if err != nil {
+		http.Error(w, "Database query failed", http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+
+	var provider []Provider
+	for rows.Next() {
+		var p Provider
+		rows.Scan(&p.Name, &p.Phone, &p.Description, &p.ServiceID)
+		provider = append(provider, p)
+	}
+	if err = rows.Err(); err != nil {
+		http.Error(w, "Row iteration error", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(provider)
+
+}
 
 func main() {
 	var err error
@@ -260,7 +288,8 @@ func main() {
 	mux.HandleFunc("PATCH /service/{id}", ServicePatch)
 	mux.HandleFunc("DELETE /service/{id}", ServiceDelete)
 
-	mux.HandleFunc("POST /provider", ProviderGet)
+	mux.HandleFunc("POST /provider", ProviderPost)
+	mux.HandleFunc("GET /provider", ProviderGet)
 
 	log.Println("Server running on port :8080")
 	log.Fatal(http.ListenAndServe(":8080", mux))
