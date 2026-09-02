@@ -42,7 +42,7 @@ func ServicePost(w http.ResponseWriter, r *http.Request) {
 	err := db.QueryRow(`
 		INSERT INTO services (name, description)
 		VALUES ($1, $2)
-		RETURNING id`,
+		RETURNING id`, // RETURNING id gives you one newly-created ID.
 		s.Name, s.Description).Scan(&s.ID) // The & means you're giving Scan the memory addresses where it should put the values.
 
 	if err != nil {
@@ -69,6 +69,10 @@ func ServiceGet(w http.ResponseWriter, r *http.Request) { // r request for data 
 	defer rows.Close() // why?
 
 	services := make([]Service, 0)
+	// The loop basically means:
+	// "Give me the first row → scan it → put it in my slice.
+	// Give me the next row → scan it → put it in my slice.
+	// Keep going until there are no more rows."
 	for rows.Next() {
 		var s Service
 		if err := rows.Scan(&s.ID, &s.Name, &s.Description); err != nil {
