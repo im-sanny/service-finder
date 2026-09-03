@@ -292,6 +292,32 @@ func ProviderID(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(p)
 }
 
+func ProviderPut(w http.ResponseWriter, r *http.Request) {
+	idStr := r.PathValue("id")
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		http.Error(w, "Invalid ID", http.StatusBadRequest)
+		return
+	}
+
+	var p Provider
+	err = db.QueryRow(`
+	UPDATE providers SET name=$1, phone=$2, location=$3, description=$4, service_id=$5 WHERE id=$6;`,
+		p.Name, p.Phone, p.Location, p.Description, p.ServiceID, id).Scan(&p.ID, &p.Name, &p.Phone, &p.Location, &p.Description, &p.ServiceID)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			http.Error(w, "Provider not found", http.StatusNotFound)
+			return
+		}
+		http.Error(w, "Failed to update provider", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(p)
+}
+
 func main() {
 	var err error
 	conStr := "postgres://postgres:360420@localhost:5432/serfin?sslmode=disable"
@@ -318,6 +344,7 @@ func main() {
 	mux.HandleFunc("POST /provider", ProviderPost)
 	mux.HandleFunc("GET /provider", ProviderGet)
 	mux.HandleFunc("GET /provider/{id}", ProviderID)
+	mux.HandleFunc("PUT /provider/{id}", ProviderPut)
 
 	log.Println("Server running on port :8080")
 	log.Fatal(http.ListenAndServe(":8080", mux))
