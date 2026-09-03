@@ -366,6 +366,37 @@ func ProviderPatch(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(p)
 }
 
+func ProviderDelete(w http.ResponseWriter, r *http.Request) {
+	idStr := r.PathValue("id")
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		http.Error(w, "Invalid ID", http.StatusBadRequest)
+		return
+	}
+
+	// Use db.Exec for operations that do not return rows
+	res, err := db.Exec(`DELETE FROM services WHERE id=$1`, id)
+	if err != nil {
+		http.Error(w, "Failed to delete service", http.StatusInternalServerError)
+		return
+	}
+
+	// Check how many rows were actually deleted
+	rowsAffected, err := res.RowsAffected()
+	if err != nil {
+		http.Error(w, "Failed to verify deletion", http.StatusInternalServerError)
+		return
+	}
+
+	if rowsAffected == 0 {
+		http.Error(w, "Service not found", http.StatusNotFound)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusNoContent) // 204 No Content is the standard REST response
+}
+
 func main() {
 	var err error
 	conStr := "postgres://postgres:360420@localhost:5432/serfin?sslmode=disable"
@@ -394,6 +425,7 @@ func main() {
 	mux.HandleFunc("GET /provider/{id}", ProviderID)
 	mux.HandleFunc("PUT /provider/{id}", ProviderPut)
 	mux.HandleFunc("PATCH /provider/{id}", ProviderPatch)
+	mux.HandleFunc("DELETE /provider/{id}", ProviderDelete)
 
 	log.Println("Server running on port :8080")
 	log.Fatal(http.ListenAndServe(":8080", mux))
