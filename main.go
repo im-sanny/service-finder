@@ -293,6 +293,11 @@ func ProviderID(w http.ResponseWriter, r *http.Request) {
 }
 
 func ProviderPut(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPut {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
 	idStr := r.PathValue("id")
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
@@ -301,16 +306,59 @@ func ProviderPut(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var p Provider
+	if err := json.NewDecoder(r.Body).Decode(&p); err != nil {
+		http.Error(w, "Failed to decode JSON", http.StatusBadRequest)
+		return
+	}
+
 	err = db.QueryRow(`
 	UPDATE providers SET name=$1, phone=$2, location=$3, description=$4, service_id=$5 WHERE id=$6;`,
 		p.Name, p.Phone, p.Location, p.Description, p.ServiceID, id).Scan(&p.ID, &p.Name, &p.Phone, &p.Location, &p.Description, &p.ServiceID)
-
 	if err != nil {
 		if err == sql.ErrNoRows {
 			http.Error(w, "Provider not found", http.StatusNotFound)
 			return
 		}
 		http.Error(w, "Failed to update provider", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(p)
+}
+
+func ProviderPatch(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPatch {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	idStr := r.PathValue("id")
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		http.Error(w, "Invalid ID", http.StatusBadRequest)
+		return
+	}
+
+	var p Provider
+	if err := json.NewDecoder(r.Body).Decode(&p); err != nil {
+		http.Error(w, "Failed to decode JSON", http.StatusBadRequest)
+		return
+	}
+
+	err = db.QueryRow(`
+	UPDATE services SET
+	name=COALESCE($1, name), phone=COALESCE($2, phone),
+	location=COALESCE($3, location), description=COALESCE($4,	description),
+	service_id=COALESCE($5,	service_id)
+	WHERE id=$6 RETURNING id, name, phone, location, description, service_id`,
+		id).Scan(&p.ID, &p.Name, &p.Phone, &p.Location, &p.Description, &p.ServiceID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			http.Error(w, "Provider not found", http.StatusNotFound)
+			return
+		}
+		http.Error(w, "Failed to patch provider", http.StatusInternalServerError)
 		return
 	}
 
@@ -345,6 +393,7 @@ func main() {
 	mux.HandleFunc("GET /provider", ProviderGet)
 	mux.HandleFunc("GET /provider/{id}", ProviderID)
 	mux.HandleFunc("PUT /provider/{id}", ProviderPut)
+	mux.HandleFunc("PATCH /provider/{id}", ProviderPatch)
 
 	log.Println("Server running on port :8080")
 	log.Fatal(http.ListenAndServe(":8080", mux))
