@@ -6,22 +6,10 @@ import (
 	"log"
 	"net/http"
 	"strconv"
-	"time"
 
 	"github.com/im-sanny/service-finder/model"
 	_ "github.com/lib/pq"
 )
-
-type Provider struct {
-	ID          int64     `json:"id"`
-	Name        string    `json:"name"`
-	Phone       string    `json:"phone"`
-	Location    string    `json:"location"`
-	Description string    `json:"description"`
-	ServiceID   int64     `json:"service_id"`
-	CreatedAt   time.Time `json:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at"`
-}
 
 var db *sql.DB
 
@@ -223,7 +211,7 @@ func ProviderPost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var p Provider
+	var p model.Provider
 	if err := json.NewDecoder(r.Body).Decode(&p); err != nil {
 		http.Error(w, "Failed to decode JSON", http.StatusBadRequest)
 		return
@@ -252,9 +240,9 @@ func ProviderGet(w http.ResponseWriter, r *http.Request) {
 	}
 	defer rows.Close()
 
-	var provider []Provider
+	var provider []model.Provider
 	for rows.Next() {
-		var p Provider
+		var p model.Provider
 		rows.Scan(&p.Name, &p.Phone, &p.Description, &p.ServiceID)
 		provider = append(provider, p)
 	}
@@ -280,7 +268,7 @@ func ProviderID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var p Provider
+	var p model.Provider
 	err = db.QueryRow(`SELECT id, name, phone, location, description, service_id FROM providers WHERE id=$1`, id).Scan(&p.ID, &p.Name, &p.Phone, &p.Description, &p.ServiceID)
 	if err != nil {
 		http.Error(w, "Database query failed", http.StatusInternalServerError)
@@ -304,7 +292,7 @@ func ProviderPut(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var p Provider
+	var p model.Provider
 	if err := json.NewDecoder(r.Body).Decode(&p); err != nil {
 		http.Error(w, "Failed to decode JSON", http.StatusBadRequest)
 		return
@@ -339,7 +327,7 @@ func ProviderPatch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var p Provider
+	var p model.Provider
 	if err := json.NewDecoder(r.Body).Decode(&p); err != nil {
 		http.Error(w, "Failed to decode JSON", http.StatusBadRequest)
 		return
