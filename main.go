@@ -6,23 +6,21 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"time"
 
+	"github.com/im-sanny/service-finder/model"
 	_ "github.com/lib/pq"
 )
 
-type Service struct {
-	ID          int     `json:"id"`
-	Name        *string `json:"name"`
-	Description *string `json:"description"`
-}
-
 type Provider struct {
-	ID          int    `json:"id"`
-	Name        string `json:"name"`
-	Phone       int    `json:"phone"`
-	Location    string `json:"location"`
-	Description string `json:"description"`
-	ServiceID   int    `json:"service_id"`
+	ID          int64     `json:"id"`
+	Name        string    `json:"name"`
+	Phone       string    `json:"phone"`
+	Location    string    `json:"location"`
+	Description string    `json:"description"`
+	ServiceID   int64     `json:"service_id"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
 }
 
 var db *sql.DB
@@ -33,7 +31,7 @@ func ServicePost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var s Service
+	var s model.Service
 	if err := json.NewDecoder(r.Body).Decode(&s); err != nil {
 		http.Error(w, "Failed to decode JSON", http.StatusBadRequest)
 		return
@@ -68,13 +66,13 @@ func ServiceGet(w http.ResponseWriter, r *http.Request) { // r request for data 
 	}
 	defer rows.Close() // why?
 
-	services := make([]Service, 0)
+	services := make([]model.Service, 0)
 	// The loop basically means:
 	// "Give me the first row → scan it → put it in my slice.
 	// Give me the next row → scan it → put it in my slice.
 	// Keep going until there are no more rows."
 	for rows.Next() {
-		var s Service
+		var s model.Service
 		if err := rows.Scan(&s.ID, &s.Name, &s.Description); err != nil {
 			http.Error(w, "Failed to scan row", http.StatusInternalServerError)
 			return
@@ -103,7 +101,7 @@ func ServiceId(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var s Service
+	var s model.Service
 	err = db.QueryRow(`SELECT id, name, description, FROM services WHERE id=$1;`, id).Scan(&s.ID, &s.Name, &s.Description)
 	if err != nil {
 		http.Error(w, "Database query failed", http.StatusInternalServerError)
@@ -127,7 +125,7 @@ func ServicePut(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var s Service
+	var s model.Service
 	if err := json.NewDecoder(r.Body).Decode(&s); err != nil {
 		http.Error(w, "Failed to decode JSON", http.StatusBadRequest)
 		return
@@ -136,7 +134,8 @@ func ServicePut(w http.ResponseWriter, r *http.Request) {
 	err = db.QueryRow(`
 	UPDATE services
 	SET name=$1, description=$2, WHERE id=$3`,
-		s.Name, s.Description, id).Scan(&s.ID, &s.Name, &s.Description)
+		s.Name, s.Description, // The SQL says what values it needs. Go supplies them.
+		id).Scan(&s.ID, &s.Name, &s.Description)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			http.Error(w, "Service not found", http.StatusNotFound)
@@ -163,7 +162,7 @@ func ServicePatch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var s Service
+	var s model.Service
 	if err := json.NewDecoder(r.Body).Decode(&s); err != nil {
 		http.Error(w, "Failed to decode JSON", http.StatusBadRequest)
 		return
