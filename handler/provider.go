@@ -35,13 +35,14 @@ func (h *ProviderHandler) ProviderPost(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(p)
 }
+
 func (h *ProviderHandler) ProviderGet(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	rows, err := h.DB.Query(`SELECT name, phone, location, description, service_id  FROM providers`)
+	rows, err := h.DB.Query(`SELECT id, name, phone, location, description, service_id FROM providers`)
 	if err != nil {
 		http.Error(w, "Database query failed", http.StatusInternalServerError)
 		return
@@ -51,7 +52,10 @@ func (h *ProviderHandler) ProviderGet(w http.ResponseWriter, r *http.Request) {
 	var provider []model.Provider
 	for rows.Next() {
 		var p model.Provider
-		rows.Scan(&p.Name, &p.Phone, &p.Description, &p.ServiceID)
+		if err := rows.Scan(&p.ID, &p.Name, &p.Phone, &p.Location, &p.Description, &p.ServiceID); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 		provider = append(provider, p)
 	}
 	if err = rows.Err(); err != nil {
@@ -63,6 +67,7 @@ func (h *ProviderHandler) ProviderGet(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(provider)
 
 }
+
 func (h *ProviderHandler) ProviderID(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method not allowed", http.StatusBadRequest)
@@ -77,7 +82,8 @@ func (h *ProviderHandler) ProviderID(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var p model.Provider
-	err = h.DB.QueryRow(`SELECT id, name, phone, location, description, service_id FROM providers WHERE id=$1`, id).Scan(&p.ID, &p.Name, &p.Phone, &p.Description, &p.ServiceID)
+	err = h.DB.QueryRow(`SELECT id, name, phone, location, description, service_id FROM providers WHERE id=$1`,
+		id).Scan(&p.ID, &p.Name, &p.Phone, &p.Location, &p.Description, &p.ServiceID)
 	if err != nil {
 		http.Error(w, "Database query failed", http.StatusInternalServerError)
 		return
@@ -107,11 +113,12 @@ func (h *ProviderHandler) ProviderPut(w http.ResponseWriter, r *http.Request) {
 	}
 
 	err = h.DB.QueryRow(`
-	UPDATE providers SET name=$1, phone=$2, location=$3, description=$4, service_id=$5 WHERE id=$6;`,
+	UPDATE providers SET name=$1, phone=$2, location=$3, description=$4, service_id=$5 WHERE id=$6
+	RETURNING id, name, phone, location, description, service_id`,
 		p.Name, p.Phone, p.Location, p.Description, p.ServiceID, id).Scan(&p.ID, &p.Name, &p.Phone, &p.Location, &p.Description, &p.ServiceID)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			http.Error(w, "Provider not found", http.StatusNotFound)
+			http.Error(w, err.Error(), http.StatusNotFound)
 			return
 		}
 		http.Error(w, "Failed to update provider", http.StatusInternalServerError)
@@ -142,18 +149,21 @@ func (h *ProviderHandler) ProviderPatch(w http.ResponseWriter, r *http.Request) 
 	}
 
 	err = h.DB.QueryRow(`
-	UPDATE services SET
-	name=COALESCE($1, name), phone=COALESCE($2, phone),
-	location=COALESCE($3, location), description=COALESCE($4,	description),
+	UPDATE providers SET
+	name=COALESCE($1, name),
+	phone=COALESCE($2, phone),
+	location=COALESCE($3, location),
+	description=COALESCE($4, description),
 	service_id=COALESCE($5,	service_id)
 	WHERE id=$6 RETURNING id, name, phone, location, description, service_id`,
-		id).Scan(&p.ID, &p.Name, &p.Phone, &p.Location, &p.Description, &p.ServiceID)
+		p.Name, p.Phone, p.Location, p.Description, p.ServiceID, id).Scan(&p.ID,
+		&p.Name, &p.Phone, &p.Location, &p.Description, &p.ServiceID)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			http.Error(w, "Provider not found", http.StatusNotFound)
+			http.Error(w, err.Error(), http.StatusNotFound)
 			return
 		}
-		http.Error(w, "Failed to patch provider", http.StatusInternalServerError)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -170,7 +180,7 @@ func (h *ProviderHandler) ProviderDelete(w http.ResponseWriter, r *http.Request)
 	}
 
 	// Use h.DB.Exec for operations that do not return rows
-	res, err := h.DB.Exec(`DELETE FROM services WHERE id=$1`, id)
+	res, err := h.DB.Exec(`DELETE FROM providers WHERE id=$1`, id)
 	if err != nil {
 		http.Error(w, "Failed to delete service", http.StatusInternalServerError)
 		return
@@ -184,7 +194,7 @@ func (h *ProviderHandler) ProviderDelete(w http.ResponseWriter, r *http.Request)
 	}
 
 	if rowsAffected == 0 {
-		http.Error(w, "Service not found", http.StatusNotFound)
+		http.Error(w, "Provider not found", http.StatusNotFound)
 		return
 	}
 

@@ -90,8 +90,12 @@ func (h *ServiceHandler) ServiceId(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var s model.Service
-	err = h.DB.QueryRow(`SELECT id, name, description, FROM services WHERE id=$1;`, id).Scan(&s.ID, &s.Name, &s.Description)
+	err = h.DB.QueryRow(`SELECT id, name, description FROM services WHERE id=$1;`, id).Scan(&s.ID, &s.Name, &s.Description)
 	if err != nil {
+		if err == sql.ErrNoRows {
+			http.Error(w, "Service not found", http.StatusNotFound)
+			return
+		}
 		http.Error(w, "Database query failed", http.StatusInternalServerError)
 		return
 	}
@@ -121,9 +125,9 @@ func (h *ServiceHandler) ServicePut(w http.ResponseWriter, r *http.Request) {
 
 	err = h.DB.QueryRow(`
 	UPDATE services
-	SET name=$1, description=$2, WHERE id=$3`,
-		s.Name, s.Description, // The SQL says what values it needs. Go supplies them.
-		id).Scan(&s.ID, &s.Name, &s.Description)
+	SET name=$1, description=$2
+	WHERE id=$3 RETURNING id, name, description`, s.Name, s.Description, id, // The SQL says what values it needs. Go supplies them.
+	).Scan(&s.ID, &s.Name, &s.Description)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			http.Error(w, "Service not found", http.StatusNotFound)
@@ -161,7 +165,7 @@ func (h *ServiceHandler) ServicePatch(w http.ResponseWriter, r *http.Request) {
 	SET name=COALESCE($1, name),
 	description=COALESCE($2, description)
 	WHERE id=$3
-	RETURNING id, name, description`, // why i need to return these for patch when i don't need it for update?
+	RETURNING id, name, description`,
 		s.Name, s.Description, id).Scan(&s.ID, &s.Name, &s.Description)
 
 	if err != nil {
