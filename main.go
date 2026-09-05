@@ -7,8 +7,8 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/im-sanny/service-finder/database"
 	"github.com/im-sanny/service-finder/model"
-	_ "github.com/lib/pq"
 )
 
 var db *sql.DB
@@ -385,18 +385,14 @@ func ProviderDelete(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	var err error
 	conStr := "postgres://postgres:360420@localhost:5432/serfin?sslmode=disable"
 
-	db, err = sql.Open("postgres", conStr)
+	db, err := database.Connect(conStr)
 	if err != nil {
-		log.Fatal("Failed to open database:", err)
+		log.Fatal(err)
 	}
-
-	if err = db.Ping(); err != nil {
-		log.Fatal("Failed to ping database:", err)
-	}
-	log.Println("Database connected successfully!")
+	defer db.Close()
+	log.Println("Database connected successfully")
 
 	mux := http.NewServeMux()
 
