@@ -39,7 +39,7 @@ func (h *psr) Create(s *model.Service) error {
 }
 
 func (h *psr) GetAll() ([]model.Service, error) {
-	rows, err := h.db.Query(`SELECT id, name, description FROM services;`)
+	rows, err := h.db.Query(`SELECT id, name, description, created_at, updated_at FROM services;`)
 	if err != nil {
 		return nil, err
 	}
