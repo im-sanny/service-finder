@@ -133,13 +133,23 @@ func (h *psr) Patch(id int64, name, description string) (*model.Service, error) 
 }
 
 func (h *psr) Delete(id int64) error {
-
-	var deletedId int
-	err := h.db.QueryRow(`DELETE FROM services WHERE id=$1 RETURNING id`, id).Scan(&deletedId)
+	// 1. Use Exec instead of QueryRow for operations that don't need to scan returning data
+	res, err := h.db.Exec(`DELETE FROM services WHERE id = $1`, id)
 	if err != nil {
-		if err == sql.ErrNoRows {
-			return fmt.Errorf("failed to delete service %d: %w", id, err)
-		}
+		return fmt.Errorf("failed to execute delete for service %d: %w", id, err)
 	}
+
+	// 2. Check how many rows were actually affected
+	rowsAffected, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to check rows affected for service %d: %w", id, err)
+	}
+
+	// 3. If 0 rows were affected, the ID didn't exist.
+	// Returning sql.ErrNoRows allows your HTTP handler to easily map this to a 404 status.
+	if rowsAffected == 0 {
+		return sql.ErrNoRows
+	}
+
 	return nil
 }
