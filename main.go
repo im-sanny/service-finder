@@ -24,9 +24,8 @@ func main() {
 	serviceRepo := repository.NewServiceRepository(db)
 	sH := handler.NewServiceHandler(serviceRepo)
 
-	pH := handler.ProviderHandler{
-		DB: db,
-	}
+	providerRepo := repository.NewProviderRepository(db)
+	pH := handler.NewProviderHandler(providerRepo)
 
 	mux.HandleFunc("POST /service", sH.ServicePost)
 	mux.HandleFunc("GET /service", sH.ServiceGet)

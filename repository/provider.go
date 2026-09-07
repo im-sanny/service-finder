@@ -8,7 +8,7 @@ import (
 
 type ProviderRepository interface {
 	Create(p *model.Provider) error
-	GetAll([]model.Provider) error
+	GetAll() ([]model.Provider, error)
 	GetById(id int64) (*model.Provider, error)
 	Update(p *model.Provider) error
 	Patch(id int64, name, phone, location, description string, service_id int64) (*model.Provider, error)
@@ -35,14 +35,14 @@ func (h *ppr) Create(p *model.Provider) error {
 	return nil
 }
 
-func (h *ppr) GetAll([]model.Provider) error {
+func (h *ppr) GetAll() ([]model.Provider, error) {
 	rows, err := h.db.Query(`
 	SELECT id, name, phone,
 	location, description,
 	service_id
 	FROM providers`)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer rows.Close()
 
@@ -50,15 +50,15 @@ func (h *ppr) GetAll([]model.Provider) error {
 	for rows.Next() {
 		var p model.Provider
 		if err := rows.Scan(&p.ID, &p.Name, &p.Phone, &p.Location, &p.Description, &p.ServiceID); err != nil {
-			return err
+			return nil, err
 		}
 		provider = append(provider, p)
 	}
 	if err := rows.Err(); err != nil {
-		return err
+		return nil, err
 	}
 
-	return nil
+	return provider, nil
 }
 
 func (h *ppr) GetById(id int64) (*model.Provider, error) {
