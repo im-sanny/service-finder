@@ -13,7 +13,7 @@ type ServiceRepository interface {
 	GetById(id int64) (*model.Service, error)
 	Create(s *model.Service) error
 	Update(s *model.Service) error
-	Patch(id int64, name, description string) (*model.Service, error)
+	Patch(id int64, name, description *string) (*model.Service, error)
 	Delete(id int64) error
 }
 
@@ -107,7 +107,7 @@ func (h *psr) Update(s *model.Service) error {
 	return nil
 }
 
-func (h *psr) Patch(id int64, name, description string) (*model.Service, error) {
+func (h *psr) Patch(id int64, name, description *string) (*model.Service, error) {
 	var s model.Service
 
 	err := h.db.QueryRow(`

@@ -70,7 +70,7 @@ func (h *ProviderHandler) ProviderID(w http.ResponseWriter, r *http.Request) {
 	}
 
 	p, err := h.repo.GetById(int64(id))
-	if err != nil {
+	if err != nil { // what if someone request for deleted provider? we should give data not found
 		http.Error(w, "Database query failed", http.StatusInternalServerError)
 		return
 	}
@@ -132,13 +132,13 @@ func (h *ProviderHandler) ProviderPatch(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	p, err := h.repo.Patch(int64(id), *u.Name, *u.Phone, *u.Location, *u.Description, *u.ServiceID)
+	p, err := h.repo.Patch(int64(id), u.Name, u.Phone, u.Location, u.Description, u.ServiceID)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			http.Error(w, err.Error(), http.StatusNotFound)
+			http.Error(w, "service not found", http.StatusNotFound)
 			return
 		}
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, "failed to patch", http.StatusInternalServerError)
 		return
 	}
 

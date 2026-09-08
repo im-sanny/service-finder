@@ -11,7 +11,7 @@ type ProviderRepository interface {
 	GetAll() ([]model.Provider, error)
 	GetById(id int64) (*model.Provider, error)
 	Update(p *model.Provider) error
-	Patch(id int64, name, phone, location, description string, service_id int64) (*model.Provider, error)
+	Patch(id int64, name, phone, location, description *string, service_id *int64) (*model.Provider, error)
 	Delete(id int64) error
 }
 
@@ -99,7 +99,7 @@ func (h *ppr) Update(p *model.Provider) error {
 	return nil
 }
 
-func (h *ppr) Patch(id int64, name, phone, location, description string, service_id int64) (*model.Provider, error) {
+func (h *ppr) Patch(id int64, name, phone, location, description *string, service_id *int64) (*model.Provider, error) {
 	var p model.Provider
 
 	err := h.db.QueryRow(`
@@ -119,9 +119,6 @@ func (h *ppr) Patch(id int64, name, phone, location, description string, service
 		&p.Location, &p.Description,
 		&p.ServiceID)
 	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, err
-		}
 		return nil, err
 	}
 	return &p, nil

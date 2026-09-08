@@ -139,7 +139,7 @@ func (h *ServiceHandler) ServicePatch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	s, err := h.repo.Patch(int64(id), *update.Name, *update.Description)
+	s, err := h.repo.Patch(int64(id), update.Name, update.Description)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			http.Error(w, "Service not found", http.StatusNotFound)
