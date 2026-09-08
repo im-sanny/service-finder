@@ -19,9 +19,22 @@ func NewServiceHandler(repo repository.ServiceRepository) *ServiceHandler {
 	return &ServiceHandler{repo: repo}
 }
 
+// getIDFromPath extracts and validates the int64 ID from the URL path.
+// This removes duplicated parsing logic across the handlers below.
+func getIDFromPath(w http.ResponseWriter, r *http.Request) (int64, bool) {
+	idStr := r.PathValue("id")
+	// ParseInt is safer than Atoi for int64 and prevents 32-bit overflow
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		http.Error(w, "Invalid ID format", http.StatusBadRequest)
+		return 0, false
+	}
+	return id, true
+}
+
 // - *ServiceHandler: avoids copying the struct, shares the DB pool.
 // - *http.Request: avoids copying large request data, allows body/context reading.
-func (h *ServiceHandler) ServicePost(w http.ResponseWriter, r *http.Request) {
+func (h *ServiceHandler) Create(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -34,7 +47,8 @@ func (h *ServiceHandler) ServicePost(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.repo.Create(&s); err != nil {
-		http.Error(w, "Failed to insert service", http.StatusInternalServerError)
+		// Note: In a real app, you should log the actual 'err' here before returning a generic message
+		http.Error(w, "Failed to create service", http.StatusInternalServerError)
 		return
 	}
 
@@ -43,7 +57,7 @@ func (h *ServiceHandler) ServicePost(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(s)
 }
 
-func (h *ServiceHandler) ServiceGet(w http.ResponseWriter, r *http.Request) { // r request for data and w writes or provide that data
+func (h *ServiceHandler) GetAll(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -59,20 +73,18 @@ func (h *ServiceHandler) ServiceGet(w http.ResponseWriter, r *http.Request) { //
 	json.NewEncoder(w).Encode(services)
 }
 
-func (h *ServiceHandler) ServiceId(w http.ResponseWriter, r *http.Request) {
+func (h *ServiceHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusBadRequest)
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	idStr := r.PathValue("id")
-	id, err := strconv.Atoi(idStr)
-	if err != nil {
-		http.Error(w, "Invalid ID", http.StatusBadRequest)
+	id, ok := getIDFromPath(w, r)
+	if !ok {
 		return
 	}
 
-	s, err := h.repo.GetById(int64(id))
+	s, err := h.repo.GetById(id)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			http.Error(w, "Service not found", http.StatusNotFound)
@@ -86,16 +98,14 @@ func (h *ServiceHandler) ServiceId(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(s)
 }
 
-func (h *ServiceHandler) ServicePut(w http.ResponseWriter, r *http.Request) {
+func (h *ServiceHandler) Update(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPut {
-		http.Error(w, "Method not allowed", http.StatusBadRequest)
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	idStr := r.PathValue("id")
-	id, err := strconv.Atoi(idStr)
-	if err != nil {
-		http.Error(w, "Invalid ID", http.StatusBadRequest)
+	id, ok := getIDFromPath(w, r)
+	if !ok {
 		return
 	}
 
@@ -105,7 +115,7 @@ func (h *ServiceHandler) ServicePut(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	s.ID = int64(id)
+	s.ID = id
 
 	if err := h.repo.Update(&s); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -120,16 +130,14 @@ func (h *ServiceHandler) ServicePut(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(s)
 }
 
-func (h *ServiceHandler) ServicePatch(w http.ResponseWriter, r *http.Request) {
+func (h *ServiceHandler) Patch(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPatch {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	idStr := r.PathValue("id")
-	id, err := strconv.Atoi(idStr)
-	if err != nil {
-		http.Error(w, "Invalid ID", http.StatusBadRequest)
+	id, ok := getIDFromPath(w, r)
+	if !ok {
 		return
 	}
 
@@ -139,7 +147,7 @@ func (h *ServiceHandler) ServicePatch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	s, err := h.repo.Patch(int64(id), update.Name, update.Description)
+	s, err := h.repo.Patch(id, update.Name, update.Description)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			http.Error(w, "Service not found", http.StatusNotFound)
@@ -151,22 +159,23 @@ func (h *ServiceHandler) ServicePatch(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(s)
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(s)
 }
 
-func (h *ServiceHandler) ServiceDelete(w http.ResponseWriter, r *http.Request) {
+func (h *ServiceHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodDelete {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	idStr := r.PathValue("id")
-	id, err := strconv.Atoi(idStr)
-	if err != nil {
-		http.Error(w, "Invalid ID", http.StatusBadRequest)
+	id, ok := getIDFromPath(w, r)
+	if !ok {
 		return
 	}
 
-	if err := h.repo.Delete(int64(id)); err != nil {
+	if err := h.repo.Delete(id); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			http.Error(w, "Service not found", http.StatusNotFound)
 			return
@@ -175,6 +184,5 @@ func (h *ServiceHandler) ServiceDelete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusNoContent)
 }
