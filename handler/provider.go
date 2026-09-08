@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
-	"strconv"
 
 	"github.com/im-sanny/service-finder/model"
 	"github.com/im-sanny/service-finder/repository"
@@ -19,7 +18,7 @@ func NewProviderHandler(repo repository.ProviderRepository) *ProviderHandler {
 	return &ProviderHandler{repo: repo}
 }
 
-func (h *ProviderHandler) ProviderPost(w http.ResponseWriter, r *http.Request) {
+func (h *ProviderHandler) Create(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -30,8 +29,9 @@ func (h *ProviderHandler) ProviderPost(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to decode JSON", http.StatusBadRequest)
 		return
 	}
+
 	if err := h.repo.Create(&p); err != nil {
-		http.Error(w, "Failed to insert service", http.StatusInternalServerError)
+		http.Error(w, "Failed to create provider", http.StatusInternalServerError)
 		return
 	}
 
@@ -40,37 +40,39 @@ func (h *ProviderHandler) ProviderPost(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(p)
 }
 
-func (h *ProviderHandler) ProviderGet(w http.ResponseWriter, r *http.Request) {
+func (h *ProviderHandler) GetAll(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	provider, err := h.repo.GetAll()
+	providers, err := h.repo.GetAll()
 	if err != nil {
 		http.Error(w, "Database query failed", http.StatusInternalServerError)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(provider)
+	json.NewEncoder(w).Encode(providers)
 }
 
-func (h *ProviderHandler) ProviderID(w http.ResponseWriter, r *http.Request) {
+func (h *ProviderHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusBadRequest)
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	idStr := r.PathValue("id")
-	id, err := strconv.Atoi(idStr)
+	id, ok := getIDFromPath(w, r)
+	if !ok {
+		return
+	}
+
+	p, err := h.repo.GetById(id)
 	if err != nil {
-		http.Error(w, "Invalid ID", http.StatusBadRequest)
-		return
-	}
-
-	p, err := h.repo.GetById(int64(id))
-	if err != nil { // what if someone request for deleted provider? we should give data not found
+		if errors.Is(err, sql.ErrNoRows) {
+			http.Error(w, "Provider not found", http.StatusNotFound)
+			return
+		}
 		http.Error(w, "Database query failed", http.StatusInternalServerError)
 		return
 	}
@@ -79,16 +81,14 @@ func (h *ProviderHandler) ProviderID(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(p)
 }
 
-func (h *ProviderHandler) ProviderPut(w http.ResponseWriter, r *http.Request) {
+func (h *ProviderHandler) Update(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPut {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	idStr := r.PathValue("id")
-	id, err := strconv.Atoi(idStr)
-	if err != nil {
-		http.Error(w, "Invalid ID", http.StatusBadRequest)
+	id, ok := getIDFromPath(w, r)
+	if !ok {
 		return
 	}
 
@@ -97,12 +97,11 @@ func (h *ProviderHandler) ProviderPut(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to decode JSON", http.StatusBadRequest)
 		return
 	}
-	p.ID = int64(id)
+	p.ID = id // Trust URL path over JSON body
 
-	err = h.repo.Update(&p)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			http.Error(w, err.Error(), http.StatusNotFound)
+	if err := h.repo.Update(&p); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			http.Error(w, "Provider not found", http.StatusNotFound)
 			return
 		}
 		http.Error(w, "Failed to update provider", http.StatusInternalServerError)
@@ -113,16 +112,14 @@ func (h *ProviderHandler) ProviderPut(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(p)
 }
 
-func (h *ProviderHandler) ProviderPatch(w http.ResponseWriter, r *http.Request) {
+func (h *ProviderHandler) Patch(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPatch {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	idStr := r.PathValue("id")
-	id, err := strconv.Atoi(idStr)
-	if err != nil {
-		http.Error(w, "Invalid ID", http.StatusBadRequest)
+	id, ok := getIDFromPath(w, r)
+	if !ok {
 		return
 	}
 
@@ -132,13 +129,13 @@ func (h *ProviderHandler) ProviderPatch(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	p, err := h.repo.Patch(int64(id), u.Name, u.Phone, u.Location, u.Description, u.ServiceID)
+	p, err := h.repo.Patch(id, u.Name, u.Phone, u.Location, u.Description, u.ServiceID)
 	if err != nil {
-		if err == sql.ErrNoRows {
-			http.Error(w, "service not found", http.StatusNotFound)
+		if errors.Is(err, sql.ErrNoRows) {
+			http.Error(w, "Provider not found", http.StatusNotFound)
 			return
 		}
-		http.Error(w, "failed to patch", http.StatusInternalServerError)
+		http.Error(w, "Failed to patch provider", http.StatusInternalServerError)
 		return
 	}
 
@@ -146,24 +143,25 @@ func (h *ProviderHandler) ProviderPatch(w http.ResponseWriter, r *http.Request) 
 	json.NewEncoder(w).Encode(p)
 }
 
-func (h *ProviderHandler) ProviderDelete(w http.ResponseWriter, r *http.Request) {
-	idStr := r.PathValue("id")
-	id, err := strconv.Atoi(idStr)
-	if err != nil {
-		http.Error(w, "Invalid ID", http.StatusBadRequest)
+func (h *ProviderHandler) Delete(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodDelete {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	// Use h.DB.Exec for operations that do not return rows
-	if err = h.repo.Delete(int64(id)); err != nil {
+	id, ok := getIDFromPath(w, r)
+	if !ok {
+		return
+	}
+
+	if err := h.repo.Delete(id); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			http.Error(w, "Service not found", http.StatusNotFound)
+			http.Error(w, "Provider not found", http.StatusNotFound)
 			return
 		}
-		http.Error(w, "Failed to delete service", http.StatusInternalServerError)
+		http.Error(w, "Failed to delete provider", http.StatusInternalServerError)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusNoContent) // 204 No Content is the standard REST response
+	w.WriteHeader(http.StatusNoContent)
 }
