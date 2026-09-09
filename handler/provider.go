@@ -19,11 +19,6 @@ func NewProviderHandler(repo repository.ProviderRepository) *ProviderHandler {
 }
 
 func (h *ProviderHandler) Create(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
 	var p model.Provider
 	if err := json.NewDecoder(r.Body).Decode(&p); err != nil {
 		http.Error(w, "Failed to decode JSON", http.StatusBadRequest)
@@ -39,11 +34,6 @@ func (h *ProviderHandler) Create(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *ProviderHandler) GetAll(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
 	providers, err := h.repo.GetAll()
 	if err != nil {
 		http.Error(w, "Database query failed", http.StatusInternalServerError)
@@ -54,11 +44,6 @@ func (h *ProviderHandler) GetAll(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *ProviderHandler) GetByID(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
 	id, ok := getIDFromPath(w, r)
 	if !ok {
 		return
@@ -78,11 +63,6 @@ func (h *ProviderHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *ProviderHandler) Update(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPut {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
 	id, ok := getIDFromPath(w, r)
 	if !ok {
 		return
@@ -108,11 +88,6 @@ func (h *ProviderHandler) Update(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *ProviderHandler) Patch(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPatch {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
 	id, ok := getIDFromPath(w, r)
 	if !ok {
 		return
@@ -138,11 +113,6 @@ func (h *ProviderHandler) Patch(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *ProviderHandler) Delete(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodDelete {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
 	id, ok := getIDFromPath(w, r)
 	if !ok {
 		return
