@@ -145,9 +145,6 @@ func (h *ServiceHandler) Patch(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(s)
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(s)
 }
 
 func (h *ServiceHandler) Delete(w http.ResponseWriter, r *http.Request) {
