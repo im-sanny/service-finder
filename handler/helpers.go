@@ -21,6 +21,7 @@ func getIDFromPath(w http.ResponseWriter, r *http.Request) (int64, bool) {
 
 func decodeJSON(w http.ResponseWriter, r *http.Request, data any) bool {
 	if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
+		http.Error(w, "Failed to decode JSON", http.StatusBadRequest)
 		return false
 	}
 	return true

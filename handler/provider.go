@@ -2,7 +2,6 @@ package handler
 
 import (
 	"database/sql"
-	"encoding/json"
 	"errors"
 	"net/http"
 
@@ -20,8 +19,7 @@ func NewProviderHandler(repo repository.ProviderRepository) *ProviderHandler {
 
 func (h *ProviderHandler) Create(w http.ResponseWriter, r *http.Request) {
 	var p model.Provider
-	if err := json.NewDecoder(r.Body).Decode(&p); err != nil {
-		http.Error(w, "Failed to decode JSON", http.StatusBadRequest)
+	if !decodeJSON(w, r, &p) {
 		return
 	}
 
@@ -69,8 +67,7 @@ func (h *ProviderHandler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var p model.Provider
-	if err := json.NewDecoder(r.Body).Decode(&p); err != nil {
-		http.Error(w, "Failed to decode JSON", http.StatusBadRequest)
+	if !decodeJSON(w, r, &p) {
 		return
 	}
 	p.ID = id // Trust URL path over JSON body
@@ -94,8 +91,7 @@ func (h *ProviderHandler) Patch(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var u model.Provider
-	if err := json.NewDecoder(r.Body).Decode(&u); err != nil {
-		http.Error(w, "Failed to decode JSON", http.StatusBadRequest)
+	if !decodeJSON(w, r, &u) {
 		return
 	}
 

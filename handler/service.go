@@ -2,7 +2,6 @@ package handler
 
 import (
 	"database/sql"
-	"encoding/json"
 	"errors"
 	"net/http"
 
@@ -22,8 +21,7 @@ func NewServiceHandler(repo repository.ServiceRepository) *ServiceHandler {
 // - *http.Request: avoids copying large request data, allows body/context reading.
 func (h *ServiceHandler) Create(w http.ResponseWriter, r *http.Request) {
 	var s model.Service
-	if err := json.NewDecoder(r.Body).Decode(&s); err != nil {
-		http.Error(w, "Failed to decode JSON", http.StatusBadRequest)
+	if !decodeJSON(w, r, &s) {
 		return
 	}
 
@@ -72,8 +70,7 @@ func (h *ServiceHandler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var s model.Service
-	if err := json.NewDecoder(r.Body).Decode(&s); err != nil {
-		http.Error(w, "Failed to decode JSON", http.StatusBadRequest)
+	if !decodeJSON(w, r, &s) {
 		return
 	}
 
@@ -98,8 +95,7 @@ func (h *ServiceHandler) Patch(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var update model.Service
-	if err := json.NewDecoder(r.Body).Decode(&update); err != nil {
-		http.Error(w, "Failed to decode JSON", http.StatusBadRequest)
+	if !decodeJSON(w, r, &update) {
 		return
 	}
 
