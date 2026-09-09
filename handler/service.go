@@ -21,11 +21,6 @@ func NewServiceHandler(repo repository.ServiceRepository) *ServiceHandler {
 // - *ServiceHandler: avoids copying the struct, shares the DB pool.
 // - *http.Request: avoids copying large request data, allows body/context reading.
 func (h *ServiceHandler) Create(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
 	var s model.Service
 	if err := json.NewDecoder(r.Body).Decode(&s); err != nil {
 		http.Error(w, "Failed to decode JSON", http.StatusBadRequest)
@@ -42,11 +37,6 @@ func (h *ServiceHandler) Create(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *ServiceHandler) GetAll(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
 	services, err := h.repo.GetAll()
 	if err != nil {
 		http.Error(w, "Database query failed", http.StatusInternalServerError)
@@ -57,11 +47,6 @@ func (h *ServiceHandler) GetAll(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *ServiceHandler) GetByID(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
 	id, ok := getIDFromPath(w, r)
 	if !ok {
 		return
@@ -81,11 +66,6 @@ func (h *ServiceHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *ServiceHandler) Update(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPut {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
 	id, ok := getIDFromPath(w, r)
 	if !ok {
 		return
@@ -112,11 +92,6 @@ func (h *ServiceHandler) Update(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *ServiceHandler) Patch(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPatch {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
 	id, ok := getIDFromPath(w, r)
 	if !ok {
 		return
@@ -142,11 +117,6 @@ func (h *ServiceHandler) Patch(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *ServiceHandler) Delete(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodDelete {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
 	id, ok := getIDFromPath(w, r)
 	if !ok {
 		return
