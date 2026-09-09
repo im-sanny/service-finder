@@ -19,6 +19,13 @@ func getIDFromPath(w http.ResponseWriter, r *http.Request) (int64, bool) {
 	return id, true
 }
 
+func decodeJSON(w http.ResponseWriter, r *http.Request, data any) bool {
+	if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
+		return false
+	}
+	return true
+}
+
 func writeJSON(w http.ResponseWriter, status int, data any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
