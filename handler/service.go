@@ -38,9 +38,7 @@ func (h *ServiceHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(s)
+	writeJSON(w, http.StatusCreated, s)
 }
 
 func (h *ServiceHandler) GetAll(w http.ResponseWriter, r *http.Request) {
@@ -55,8 +53,7 @@ func (h *ServiceHandler) GetAll(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(services)
+	writeJSON(w, http.StatusOK, services)
 }
 
 func (h *ServiceHandler) GetByID(w http.ResponseWriter, r *http.Request) {
@@ -80,8 +77,7 @@ func (h *ServiceHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(s)
+	writeJSON(w, http.StatusOK, s)
 }
 
 func (h *ServiceHandler) Update(w http.ResponseWriter, r *http.Request) {
@@ -112,8 +108,7 @@ func (h *ServiceHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(s)
+	writeJSON(w, http.StatusOK, s)
 }
 
 func (h *ServiceHandler) Patch(w http.ResponseWriter, r *http.Request) {
@@ -143,8 +138,7 @@ func (h *ServiceHandler) Patch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(s)
+	writeJSON(w, http.StatusOK, s)
 }
 
 func (h *ServiceHandler) Delete(w http.ResponseWriter, r *http.Request) {
@@ -167,5 +161,5 @@ func (h *ServiceHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.WriteHeader(http.StatusNoContent)
+	writeJSON(w, http.StatusNoContent, nil)
 }
