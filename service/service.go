@@ -75,3 +75,23 @@ func (s *service) GetByID(id int64) (*model.Service, error) {
 	}
 	return svc, nil
 }
+
+func (s *service) Update(svc *model.Service) error {
+	if svc.ID <= 0 {
+		return fmt.Errorf("invalid service id %d: %w", svc.ID, ErrInvalidInput)
+	}
+	if svc.Name == nil || *svc.Name == "" {
+		return fmt.Errorf("service name required: %w", ErrInvalidInput)
+	}
+	if svc.Description == nil || *svc.Description == "" {
+		return fmt.Errorf("service description required: %w", ErrInvalidInput)
+	}
+
+	if err := s.repo.Update(svc); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return fmt.Errorf("service %d: %w", svc.ID, ErrNotFound)
+		}
+		return fmt.Errorf("update service %d: %w", svc.ID, err)
+	}
+	return nil
+}
