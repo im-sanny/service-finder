@@ -95,3 +95,18 @@ func (s *service) Update(svc *model.Service) error {
 	}
 	return nil
 }
+
+func (s *service) Patch(id int64, name, description *string) (*model.Service, error) {
+	if id <= 0 {
+		return nil, fmt.Errorf("invalid service id %d: %w", id, ErrInvalidInput)
+	}
+
+	svc, err := s.repo.Patch(id, name, description)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, fmt.Errorf("service %d: %w", id, ErrNotFound)
+		}
+		return nil, fmt.Errorf("patch service %d: %w", id, err)
+	}
+	return svc, nil
+}
