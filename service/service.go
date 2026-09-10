@@ -51,3 +51,11 @@ func (s *service) Create(svc *model.Service) error {
 	}
 	return nil
 }
+
+func (s *service) GetAll() ([]model.Service, error) {
+	services, err := s.repo.GetAll()
+	if err != nil {
+		return nil, fmt.Errorf("get all services: %w", err)
+	}
+	return services, nil
+}
