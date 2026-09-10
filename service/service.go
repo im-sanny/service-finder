@@ -110,3 +110,16 @@ func (s *service) Patch(id int64, name, description *string) (*model.Service, er
 	}
 	return svc, nil
 }
+
+func (s *service) Delete(id int64) error {
+	if id <= 0 {
+		return fmt.Errorf("invalid service id %d: %w", id, ErrInvalidInput)
+	}
+	if err := s.repo.Delete(id); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return fmt.Errorf("service %d: %w", id, ErrNotFound)
+		}
+		return fmt.Errorf("delete service %d: %w", id, err)
+	}
+	return nil
+}
