@@ -2,8 +2,12 @@ package handler
 
 import (
 	"encoding/json"
+	"errors"
+	"log"
 	"net/http"
 	"strconv"
+
+	"github.com/im-sanny/service-finder/service"
 )
 
 // getIDFromPath extracts and validates the int64 ID from the URL path.
@@ -31,4 +35,16 @@ func writeJSON(w http.ResponseWriter, status int, data any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	json.NewEncoder(w).Encode(data)
+}
+
+func respondError(w http.ResponseWriter, err error) {
+	switch {
+	case errors.Is(err, service.ErrNotFound):
+		http.Error(w, "Not found", http.StatusNotFound)
+	case errors.Is(err, service.ErrInvalidInput):
+		http.Error(w, err.Error(), http.StatusBadRequest)
+	default:
+		log.Printf("ERROR :%v", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+	}
 }
