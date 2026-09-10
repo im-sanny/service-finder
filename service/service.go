@@ -1,6 +1,7 @@
 package service
 
 import (
+	"database/sql"
 	"errors"
 	"fmt"
 
@@ -58,4 +59,19 @@ func (s *service) GetAll() ([]model.Service, error) {
 		return nil, fmt.Errorf("get all services: %w", err)
 	}
 	return services, nil
+}
+
+func (s *service) GetByID(id int64) (*model.Service, error) {
+	if id <= 0 {
+		return nil, fmt.Errorf("invalid service id %d: %w", id, ErrInvalidInput)
+	}
+
+	svc, err := s.repo.GetById(id)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, fmt.Errorf("service %d: %w", id, ErrNotFound)
+		}
+		return nil, fmt.Errorf("get service %d: %w", id, err)
+	}
+	return svc, nil
 }
