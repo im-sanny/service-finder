@@ -57,3 +57,18 @@ func (s *provider) GetAll() ([]model.Provider, error) {
 	}
 	return providers, nil
 }
+
+func (s *provider) GetByID(id int64) (*model.Provider, error) {
+	if id <= 0 {
+		return nil, fmt.Errorf("invalid provider id %d: %w", id, ErrInvalidInput)
+	}
+
+	prov, err := s.repo.GetById(id)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, fmt.Errorf("provider %d: %w", id, ErrNotFound)
+		}
+		return nil, fmt.Errorf("get provider %d: %w", id, err)
+	}
+	return prov, nil
+}
