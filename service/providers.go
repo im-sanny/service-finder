@@ -72,3 +72,31 @@ func (s *provider) GetByID(id int64) (*model.Provider, error) {
 	}
 	return prov, nil
 }
+
+func (s *provider) Update(p *model.Provider) error {
+	if p.ID <= 0 {
+		return fmt.Errorf("invalid provider id %d: %w", p.ID, ErrInvalidInput)
+	}
+	if p.Name == nil || *p.Name == "" {
+		return fmt.Errorf("provider name is required: %w", ErrInvalidInput)
+	}
+	if p.ServiceID == nil {
+		return fmt.Errorf("service id is required: %w", ErrInvalidInput)
+	}
+
+	_, err := s.serviceRepo.GetById(*p.ServiceID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return fmt.Errorf("service %d does not exist: %w", *p.ServiceID, ErrInvalidInput)
+		}
+		return fmt.Errorf("failed to verify service %d: %w", *p.ServiceID, err)
+	}
+
+	if err := s.repo.Update(p); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return fmt.Errorf("provider %d: %w", p.ID, ErrNotFound)
+		}
+		return fmt.Errorf("failed to update provider %d: %w", p.ID, err)
+	}
+	return nil
+}
