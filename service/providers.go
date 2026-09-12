@@ -49,3 +49,11 @@ func (s *provider) Create(p *model.Provider) error {
 	}
 	return nil
 }
+
+func (s *provider) GetAll() ([]model.Provider, error) {
+	providers, err := s.repo.GetAll()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get all providers: %w", err)
+	}
+	return providers, nil
+}
