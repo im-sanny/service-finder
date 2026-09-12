@@ -100,3 +100,28 @@ func (s *provider) Update(p *model.Provider) error {
 	}
 	return nil
 }
+
+func (s *provider) Patch(id int64, name, phone, location, description *string, serviceID *int64) (*model.Provider, error) {
+	if id <= 0 {
+		return nil, fmt.Errorf("invalid provider id %d: %w", id, ErrInvalidInput)
+	}
+
+	if serviceID != nil {
+		_, err := s.serviceRepo.GetById(*serviceID)
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return nil, fmt.Errorf("service %d does not exist: %w", *serviceID, ErrInvalidInput)
+			}
+			return nil, fmt.Errorf("failed to verify service %d: %w", *serviceID, err)
+		}
+	}
+
+	pvr, err := s.repo.Patch(id, name, phone, location, description, serviceID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, fmt.Errorf("provider %d: %w", id, ErrNotFound)
+		}
+		return nil, fmt.Errorf("failed to patch provider %d: %w", id, err)
+	}
+	return pvr, nil
+}
