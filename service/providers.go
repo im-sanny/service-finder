@@ -125,3 +125,17 @@ func (s *provider) Patch(id int64, name, phone, location, description *string, s
 	}
 	return pvr, nil
 }
+
+func (s *provider) Delete(id int64) error {
+	if id <= 0 {
+		return fmt.Errorf("invalid provider id %d: %w", id, ErrInvalidInput)
+	}
+
+	if err := s.repo.Delete(id); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return fmt.Errorf("provider %d: %w", id, ErrNotFound)
+		}
+		return fmt.Errorf("failed to delete provider %d: %w", id, err)
+	}
+	return nil
+}
