@@ -1,8 +1,6 @@
 package handler
 
 import (
-	"database/sql"
-	"errors"
 	"net/http"
 
 	"github.com/im-sanny/service-finder/model"
@@ -97,15 +95,9 @@ func (h *ProviderHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-
-	if err := h.repo.Delete(id); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			http.Error(w, "Provider not found", http.StatusNotFound)
-			return
-		}
-		http.Error(w, "Failed to delete provider", http.StatusInternalServerError)
+	if err := h.pvr.Delete(id); err != nil {
+		respondError(w, err)
 		return
 	}
-
 	w.WriteHeader(http.StatusNoContent)
 }
