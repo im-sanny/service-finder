@@ -32,9 +32,9 @@ func (h *ProviderHandler) Create(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *ProviderHandler) GetAll(w http.ResponseWriter, r *http.Request) {
-	providers, err := h.repo.GetAll()
+	providers, err := h.pvr.GetAll()
 	if err != nil {
-		http.Error(w, "Database query failed", http.StatusInternalServerError)
+		respondError(w, err)
 		return
 	}
 
@@ -47,13 +47,9 @@ func (h *ProviderHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	p, err := h.repo.GetById(id)
+	p, err := h.pvr.GetByID(id)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			http.Error(w, "Provider not found", http.StatusNotFound)
-			return
-		}
-		http.Error(w, "Database query failed", http.StatusInternalServerError)
+		respondError(w, err)
 		return
 	}
 
