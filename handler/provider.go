@@ -6,15 +6,15 @@ import (
 	"net/http"
 
 	"github.com/im-sanny/service-finder/model"
-	"github.com/im-sanny/service-finder/repository"
+	"github.com/im-sanny/service-finder/service"
 )
 
 type ProviderHandler struct {
-	repo repository.ProviderRepository
+	pvr service.Providers
 }
 
-func NewProviderHandler(repo repository.ProviderRepository) *ProviderHandler {
-	return &ProviderHandler{repo: repo}
+func NewProviderHandler(pvr service.Providers) *ProviderHandler {
+	return &ProviderHandler{pvr: pvr}
 }
 
 func (h *ProviderHandler) Create(w http.ResponseWriter, r *http.Request) {
@@ -23,8 +23,8 @@ func (h *ProviderHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.repo.Create(&p); err != nil {
-		http.Error(w, "Failed to create provider", http.StatusInternalServerError)
+	if err := h.pvr.Create(&p); err != nil {
+		respondError(w, err)
 		return
 	}
 
