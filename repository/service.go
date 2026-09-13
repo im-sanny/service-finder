@@ -30,8 +30,8 @@ func NewServiceRepository(db *sql.DB) ServiceRepository {
 func (r *psr) Create(s *model.Service) error {
 	err := r.db.QueryRow(`
 		INSERT INTO services (name, description)
-		VALUES ($1, $2) RETURNING id`, // RETURNING id gives you one newly-created ID.
-		s.Name, s.Description).Scan(&s.ID) // The & means you're giving Scan the memory addresses where it should put the values.
+		VALUES ($1, $2) RETURNING id, created_at, updated_at`, // RETURNING id gives you one newly-created ID.
+		s.Name, s.Description).Scan(&s.ID, &s.CreatedAt, &s.UpdatedAt) // The & means you're giving Scan the memory addresses where it should put the values.
 	if err != nil {
 		return fmt.Errorf("failed to create service: %w", err)
 	}
@@ -84,7 +84,7 @@ func (r *psr) GetById(id int64) (*model.Service, error) {
 func (r *psr) Update(s *model.Service) error {
 	err := r.db.QueryRow(`
 		UPDATE services
-		SET name = $1, description = $2
+		SET name = $1, description = $2, updated_at = NOW()
 		WHERE id = $3
 		RETURNING id, name, description, created_at, updated_at`,
 		s.Name, s.Description, s.ID, // The SQL says what values it needs. Go supplies them.
@@ -106,8 +106,10 @@ func (r *psr) Patch(id int64, name, description *string) (*model.Service, error)
 
 	err := r.db.QueryRow(`
 		UPDATE services
-		SET name=COALESCE($1, name), description=COALESCE($2, description)
-		WHERE id=$3
+		SET name = COALESCE($1, name),
+		description = COALESCE($2, description),
+		updated_at = NOW()
+		WHERE id = $3
 		RETURNING id, name, description, created_at, updated_at`,
 		name, description, id).Scan(
 		&s.ID, &s.Name, &s.Description, &s.CreatedAt, &s.UpdatedAt,

@@ -32,15 +32,15 @@ func NewProvider(repo repository.ProviderRepository, serviceRepo repository.Serv
 
 func (s *provider) Create(p *model.Provider) error {
 	if p.Name == nil || *p.Name == "" {
-		return fmt.Errorf("service name required: %w", ErrInvalidInput)
+		return fmt.Errorf("provider name required: %w", ErrInvalidInput)
 	}
 	if p.ServiceID != nil {
 		_, err := s.serviceRepo.GetById(*p.ServiceID)
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
-				return fmt.Errorf("service id %d does not exists: %w", *p.ServiceID, ErrNotFound)
+				return fmt.Errorf("service %d does not exists: %w", *p.ServiceID, ErrNotFound)
 			}
-			return fmt.Errorf("failed to verify service %d: %w", *p.ServiceID, err)
+			return fmt.Errorf("failed to verify provider %d: %w", *p.ServiceID, err)
 		}
 	}
 
