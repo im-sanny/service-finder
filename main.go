@@ -7,6 +7,7 @@ import (
 	"github.com/im-sanny/service-finder/database"
 	"github.com/im-sanny/service-finder/handler"
 	"github.com/im-sanny/service-finder/repository"
+	"github.com/im-sanny/service-finder/service"
 )
 
 func main() {
@@ -22,10 +23,12 @@ func main() {
 	mux := http.NewServeMux()
 
 	serviceRepo := repository.NewServiceRepository(db)
-	sH := handler.NewServiceHandler(serviceRepo)
+	svr := service.NewService(serviceRepo)
+	sH := handler.NewServiceHandler(svr)
 
 	providerRepo := repository.NewProviderRepository(db)
-	pH := handler.NewProviderHandler(providerRepo)
+	pvr := service.NewProvider(providerRepo, serviceRepo)
+	pH := handler.NewProviderHandler(pvr)
 
 	mux.HandleFunc("POST /services", sH.Create)
 	mux.HandleFunc("GET /services", sH.GetAll)
