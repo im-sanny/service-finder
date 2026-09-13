@@ -61,22 +61,16 @@ func (h *ProviderHandler) Update(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-
 	var p model.Provider
 	if !decodeJSON(w, r, &p) {
 		return
 	}
 	p.ID = id // Trust URL path over JSON body
 
-	if err := h.repo.Update(&p); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			http.Error(w, "Provider not found", http.StatusNotFound)
-			return
-		}
-		http.Error(w, "Failed to update provider", http.StatusInternalServerError)
+	if err := h.pvr.Update(&p); err != nil {
+		respondError(w, err)
 		return
 	}
-
 	writeJSON(w, http.StatusOK, p)
 }
 
@@ -85,22 +79,16 @@ func (h *ProviderHandler) Patch(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-
 	var u model.Provider
 	if !decodeJSON(w, r, &u) {
 		return
 	}
 
-	p, err := h.repo.Patch(id, u.Name, u.Phone, u.Location, u.Description, u.ServiceID)
+	p, err := h.pvr.Patch(id, u.Name, u.Phone, u.Location, u.Description, u.ServiceID)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			http.Error(w, "Provider not found", http.StatusNotFound)
-			return
-		}
-		http.Error(w, "Failed to patch provider", http.StatusInternalServerError)
+		respondError(w, err)
 		return
 	}
-
 	writeJSON(w, http.StatusOK, p)
 }
 
