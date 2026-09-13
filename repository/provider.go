@@ -27,11 +27,12 @@ func NewProviderRepository(db *sql.DB) ProviderRepository {
 
 func (r *ppr) Create(p *model.Provider) error {
 	err := r.db.QueryRow(`
-		INSERT INTO providers (name, phone, location, description, service_id, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
-		RETURNING id`,
-		p.Name, p.Phone, p.Location, p.Description, p.ServiceID, p.CreatedAt, p.UpdatedAt,
-	).Scan(&p.ID)
+		INSERT INTO providers (name, phone, location, description, service_id)
+		VALUES ($1, $2, $3, $4, $5)
+		RETURNING id, created_at, updated_at`,
+		p.Name, p.Phone, p.Location, p.Description, p.ServiceID,
+	).Scan(&p.ID, &p.CreatedAt, &p.UpdatedAt)
+
 	if err != nil {
 		return fmt.Errorf("failed to create provider: %w", err)
 	}
@@ -77,10 +78,16 @@ func (r *ppr) GetById(id int64) (*model.Provider, error) {
 func (r *ppr) Update(p *model.Provider) error {
 	err := r.db.QueryRow(`
 		UPDATE providers
-		SET name=$1, phone=$2, location=$3, description=$4, service_id=$5, created_at=$6, updated_at=$7
-		WHERE id=$8
+		SET
+			name = $1,
+			phone = $2,
+			location = $3,
+			description = $4,
+			service_id = $5,
+			updated_at = NOW()
+		WHERE id = $6
 		RETURNING id, name, phone, location, description, service_id, created_at, updated_at`,
-		p.Name, p.Phone, p.Location, p.Description, p.ServiceID, p.CreatedAt, p.UpdatedAt, p.ID,
+		p.Name, p.Phone, p.Location, p.Description, p.ServiceID, p.ID,
 	).Scan(&p.ID, &p.Name, &p.Phone, &p.Location, &p.Description, &p.ServiceID, &p.CreatedAt, &p.UpdatedAt)
 
 	if err != nil {
@@ -97,12 +104,13 @@ func (r *ppr) Patch(id int64, name, phone, location, description *string, servic
 
 	err := r.db.QueryRow(`
 		UPDATE providers SET
-			name=COALESCE($1, name),
-			phone=COALESCE($2, phone),
-			location=COALESCE($3, location),
-			description=COALESCE($4, description),
-			service_id=COALESCE($5, service_id)
-		WHERE id=$6
+			name = COALESCE($1, name),
+			phone = COALESCE($2, phone),
+			location = COALESCE($3, location),
+			description = COALESCE($4, description),
+			service_id = COALESCE($5, service_id),
+			updated_at = NOW()
+		WHERE id = $6
 		RETURNING id, name, phone, location, description, service_id, created_at, updated_at`,
 		name, phone, location, description, serviceID, id,
 	).Scan(&p.ID, &p.Name, &p.Phone, &p.Location, &p.Description, &p.ServiceID, &p.CreatedAt, &p.UpdatedAt)
