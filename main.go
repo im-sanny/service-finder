@@ -1,6 +1,7 @@
 package main
 
 import (
+	"embed"
 	"log"
 	"net/http"
 
@@ -8,7 +9,14 @@ import (
 	"github.com/im-sanny/service-finder/handler"
 	"github.com/im-sanny/service-finder/repository"
 	"github.com/im-sanny/service-finder/service"
+	"github.com/pressly/goose/v3"
 )
+
+// 1. THIS LINE IS REQUIRED!
+// It tells Go to bundle all .sql files from the migrations folder into embedMigration.
+//
+//go:embed migrations/*.sql
+var embedMigration embed.FS
 
 func main() {
 	conStr := "postgres://postgres:360420@localhost:5432/serfin?sslmode=disable"
@@ -19,6 +27,16 @@ func main() {
 	}
 	defer db.Close()
 	log.Println("Database connected successfully")
+
+	if err := goose.SetDialect("postgres"); err != nil {
+		log.Fatalf("failed to set goose dialect: %v", err)
+	}
+
+	goose.SetBaseFS(embedMigration)
+	if err := goose.Up(db, "migrations"); err != nil {
+		log.Fatalf("failed to run migrations: %v", err)
+	}
+	log.Printf("Database migrations applied successfully!")
 
 	mux := http.NewServeMux()
 
