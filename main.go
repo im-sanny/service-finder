@@ -4,11 +4,13 @@ import (
 	"embed"
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/im-sanny/service-finder/database"
 	"github.com/im-sanny/service-finder/handler"
 	"github.com/im-sanny/service-finder/repository"
 	"github.com/im-sanny/service-finder/service"
+	"github.com/joho/godotenv"
 	"github.com/pressly/goose/v3"
 )
 
@@ -19,7 +21,17 @@ import (
 var embedMigration embed.FS
 
 func main() {
-	conStr := "postgres://postgres:360420@localhost:5432/serfin?sslmode=disable"
+	if err := godotenv.Load(); err != nil {
+		log.Println("No .env file found, relying on system environment variables")
+	}
+	conStr := os.Getenv("DB_URL")
+	if conStr == "" {
+		log.Fatal("DB_URL environment variable is not set. Please check your .env file.")
+	}
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
 
 	db, err := database.Connect(conStr)
 	if err != nil {
@@ -62,6 +74,6 @@ func main() {
 	mux.HandleFunc("PATCH /providers/{id}", pH.Patch)
 	mux.HandleFunc("DELETE /providers/{id}", pH.Delete)
 
-	log.Println("Server running on port :8080")
-	log.Fatal(http.ListenAndServe(":8080", mux))
+	log.Printf("Server running on port :%s", port)
+	log.Fatal(http.ListenAndServe(":"+port, mux))
 }
