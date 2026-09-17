@@ -9,6 +9,7 @@ import (
 )
 
 type ProviderRepository interface {
+	CreateBatch(tx *sql.Tx, p []*model.Provider) error
 	Create(p *model.Provider) error
 	GetAll() ([]model.Provider, error)
 	GetById(id int64) (*model.Provider, error)
@@ -23,6 +24,27 @@ type ppr struct {
 
 func NewProviderRepository(db *sql.DB) ProviderRepository {
 	return &ppr{db: db}
+}
+
+func (r *ppr) CreateBatch(tx *sql.Tx, providers []*model.Provider) error {
+	stmt, err := tx.Prepare(`
+	INSERT INTO providers (name, phone, location, description, service_id)
+	VALUES ($1, $2, $3, $4, $5)
+	RETURNING id, created_at, updated_at
+	`)
+	if err != nil {
+		return fmt.Errorf("failed to prepare batch insert: %w", err)
+	}
+	defer stmt.Close()
+
+	for _, p := range providers {
+		err := stmt.QueryRow(
+			p.Name, p.Phone, p.Location, p.Description, p.ServiceID,
+		).Scan(&p.ID, &p.CreatedAt, &p.UpdatedAt)
+		if err != nil {
+		}
+	}
+	return nil
 }
 
 func (r *ppr) Create(p *model.Provider) error {
