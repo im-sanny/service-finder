@@ -16,6 +16,9 @@ type ServiceRepository interface {
 	Update(s *model.Service) error
 	Patch(id int64, name, description *string) (*model.Service, error)
 	Delete(id int64) error
+
+	BeginTx() (*sql.Tx, error)
+	CreateBatch(tx *sql.Tx, p []*model.Service) error
 }
 
 type psr struct {
@@ -25,6 +28,33 @@ type psr struct {
 // NewServiceRepository creates a new instance, reusing the single, safe connection pool.
 func NewServiceRepository(db *sql.DB) ServiceRepository {
 	return &psr{db: db}
+}
+
+func (r *psr) BeginTx() (*sql.Tx, error) {
+	return r.db.Begin()
+}
+
+func (r *psr) CreateBatch(tx *sql.Tx, p []*model.Service) error {
+	stmt, err := tx.Prepare(
+		`INSERT INTO services (name, description)
+		VALUES ($1, $2)
+		RETURNING id, created_at, updated_at
+		`,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to prepare batch insert: %w", err)
+	}
+	defer stmt.Close()
+
+	for _, s := range p {
+		err := stmt.QueryRow(
+			s.Name, s.Name,
+		).Scan(&s.ID, &s.CreatedAt, &s.UpdatedAt)
+		if err != nil {
+			return fmt.Errorf("failed to insert services: %w", err)
+		}
+	}
+	return nil
 }
 
 func (r *psr) Create(s *model.Service) error {
