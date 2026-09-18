@@ -15,6 +15,21 @@ func NewProviderHandler(pvr service.Providers) *ProviderHandler {
 	return &ProviderHandler{pvr: pvr}
 }
 
+func (h *ProviderHandler) CreateBatch(w http.ResponseWriter, r *http.Request) {
+	var providers []*model.Provider
+	if !decodeJSON(w, r, &providers) {
+		return
+	}
+
+	created, err := h.pvr.CreateBatch(providers)
+	if err != nil {
+		respondError(w, err)
+		return
+	}
+	
+	writeJSON(w, http.StatusCreated, created)
+}
+
 func (h *ProviderHandler) Create(w http.ResponseWriter, r *http.Request) {
 	var p model.Provider
 	if !decodeJSON(w, r, &p) {
