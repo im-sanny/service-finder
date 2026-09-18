@@ -9,13 +9,16 @@ import (
 )
 
 type ProviderRepository interface {
-	CreateBatch(tx *sql.Tx, p []*model.Provider) error
 	Create(p *model.Provider) error
 	GetAll() ([]model.Provider, error)
 	GetById(id int64) (*model.Provider, error)
 	Update(p *model.Provider) error
 	Patch(id int64, name, phone, location, description *string, serviceID *int64) (*model.Provider, error)
 	Delete(id int64) error
+
+	// Batch operations with transaction support
+	BeginTx() (*sql.Tx, error)
+	CreateBatch(tx *sql.Tx, p []*model.Provider) error
 }
 
 type ppr struct {
@@ -26,6 +29,11 @@ func NewProviderRepository(db *sql.DB) ProviderRepository {
 	return &ppr{db: db}
 }
 
+func (r *ppr) BeginTx() (*sql.Tx, error) {
+	return r.db.Begin()
+}
+
+// CreateBatch inserts multiple providers using a prepared statement within a transaction
 func (r *ppr) CreateBatch(tx *sql.Tx, providers []*model.Provider) error {
 	stmt, err := tx.Prepare(`
 	INSERT INTO providers (name, phone, location, description, service_id)
@@ -37,11 +45,13 @@ func (r *ppr) CreateBatch(tx *sql.Tx, providers []*model.Provider) error {
 	}
 	defer stmt.Close()
 
+	// Execute the prepared statement for each provider
 	for _, p := range providers {
 		err := stmt.QueryRow(
 			p.Name, p.Phone, p.Location, p.Description, p.ServiceID,
 		).Scan(&p.ID, &p.CreatedAt, &p.UpdatedAt)
 		if err != nil {
+			return fmt.Errorf("failed to insert provider: %w", err)
 		}
 	}
 	return nil

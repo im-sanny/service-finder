@@ -16,6 +16,8 @@ type Providers interface {
 	Update(p *model.Provider) error
 	Patch(id int64, name, phone, location, description *string, serviceID *int64) (*model.Provider, error)
 	Delete(id int64) error
+
+	CreateBatch(p []*model.Provider) ([]*model.Provider, error)
 }
 
 type provider struct {
@@ -28,6 +30,57 @@ func NewProvider(repo repository.ProviderRepository, serviceRepo repository.Serv
 		repo:        repo,
 		serviceRepo: serviceRepo,
 	}
+}
+
+// CreateBatch creates multiple providers atomically
+func (s *provider) CreateBatch(prov []*model.Provider) ([]*model.Provider, error) {
+	// 1. Validate: slice is not empty
+	if len(prov) == 0 {
+		return nil, fmt.Errorf("provider list is empty: %w", ErrInvalidInput)
+	}
+
+	// 2. Validate EACH provider before starting transaction
+	for i, v := range prov {
+		if v.Name == nil || *v.Name == "" {
+			return nil, fmt.Errorf("provider at index %d: name is required: %w", i, ErrInvalidInput)
+		}
+	}
+
+	// 3. Verify all ServiceIDs exist (cross-entity validation)
+	for i, p := range prov {
+		if p.ServiceID != nil {
+			_, err := s.serviceRepo.GetById(*p.ServiceID)
+			if err != nil {
+				if errors.Is(err, sql.ErrNoRows) {
+					return nil, fmt.Errorf("provider at index %d: service %d does not exist: %w",
+						i, *p.ServiceID, ErrInvalidInput)
+				}
+				return nil, fmt.Errorf("provider at index %d: failed to verify service %d: %w",
+					i, *p.ServiceID, err)
+			}
+		}
+	}
+
+	// 4. Start transaction
+	tx, err := s.repo.BeginTx()
+	if err != nil {
+		return nil, fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	
+	// Ensure rollback on any error (safe to call even after commit)h
+	defer tx.Rollback()
+
+	// 5. Batch insert
+	if err := s.repo.CreateBatch(tx, prov); err != nil {
+		return nil, fmt.Errorf("batch create failed: %w", err)
+	}
+
+	// 6. Commit transaction
+	if err := tx.Commit(); err != nil {
+		return nil, fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	return prov, nil
 }
 
 func (s *provider) Create(p *model.Provider) error {
