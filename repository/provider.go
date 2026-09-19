@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/im-sanny/service-finder/model"
+	"github.com/lib/pq"
 )
 
 type ProviderRepository interface {
@@ -19,6 +20,7 @@ type ProviderRepository interface {
 	// Batch operations with transaction support
 	BeginTx() (*sql.Tx, error)
 	CreateBatch(tx *sql.Tx, p []*model.Provider) error
+	DeleteBatch(tx *sql.Tx, ids []int64) (int64, error)
 }
 
 type ppr struct {
@@ -172,4 +174,14 @@ func (r *ppr) Delete(id int64) error {
 	}
 
 	return nil
+}
+
+// DeleteBatch deletes multiple providers in a single query
+func (r *ppr) DeleteBatch(tx *sql.Tx, ids []int64) (int64, error) {
+	// PostgreSQL's ANY() operator with pq.Array for efficient batch delete
+	res, err := tx.Exec(`DELETE FROM providers WHERE id = ANY($1)`, pq.Array(ids))
+	if err != nil {
+		return 0, fmt.Errorf("failed to batch delete: %w", err)
+	}
+	return res.RowsAffected()
 }
