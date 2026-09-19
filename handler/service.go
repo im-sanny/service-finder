@@ -15,6 +15,21 @@ func NewServiceHandler(svc service.Service) *ServiceHandler {
 	return &ServiceHandler{svc: svc}
 }
 
+func (h *ServiceHandler) CreateBatch(w http.ResponseWriter, r *http.Request) {
+	var svc []*model.Service
+	if !decodeJSON(w, r, &svc) {
+		return
+	}
+
+	create, err := h.svc.CreateBatch(svc)
+	if err != nil {
+		respondError(w, err)
+		return
+	}
+
+	writeJSON(w, http.StatusCreated, create)
+}
+
 // - *ServiceHandler: avoids copying the struct, shares the DB pool.
 // - *http.Request: avoids copying large request data, allows body/context reading.
 func (h *ServiceHandler) Create(w http.ResponseWriter, r *http.Request) {
