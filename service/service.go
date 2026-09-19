@@ -25,6 +25,8 @@ type Service interface {
 	Update(s *model.Service) error
 	Patch(id int64, name, description *string) (*model.Service, error)
 	Delete(id int64) error
+
+	CreateBatch(s []*model.Service) ([]*model.Service, error)
 }
 
 // service is the PRIVATE implementation.
@@ -36,6 +38,33 @@ type service struct {
 // NewService wires the business logic to its data source.
 func NewService(repo repository.ServiceRepository) Service {
 	return &service{repo: repo}
+}
+
+func (s *service) CreateBatch(svc []*model.Service) ([]*model.Service, error) {
+	if len(svc) == 0 {
+		return nil, fmt.Errorf("service list is empty: %w", ErrInvalidInput)
+	}
+
+	for i, v := range svc {
+		if v.Name == nil || *v.Name == "" {
+			return nil, fmt.Errorf("service at index %d: name is required: %w", i, ErrInvalidInput)
+		}
+	}
+
+	tx, err := s.repo.BeginTx()
+	if err != nil {
+		return nil, fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	if err := s.repo.CreateBatch(tx, svc); err != nil {
+		return nil, fmt.Errorf("batch insert failed: %w", err)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, fmt.Errorf("failed to commit transaction: %w", err)
+	}
+	return svc, nil
 }
 
 func (s *service) Create(svc *model.Service) error {
