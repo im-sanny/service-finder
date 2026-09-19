@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/im-sanny/service-finder/model"
+	"github.com/lib/pq"
 )
 
 // ServiceRepository defines the contract for service data operations.
@@ -19,6 +20,7 @@ type ServiceRepository interface {
 
 	BeginTx() (*sql.Tx, error)
 	CreateBatch(tx *sql.Tx, p []*model.Service) error
+	DeleteBatch(tx *sql.Tx, ids []int64) (int64, error)
 }
 
 type psr struct {
@@ -172,4 +174,12 @@ func (r *psr) Delete(id int64) error {
 	}
 
 	return nil
+}
+
+func (r *psr) DeleteBatch(tx *sql.Tx, ids []int64) (int64, error) {
+	res, err := tx.Exec(`DELETE FROM services WHERE id = ANY($1)`, pq.Array(ids))
+	if err != nil {
+		return 0, fmt.Errorf("failed to batch delete: %w", err)
+	}
+	return res.RowsAffected()
 }
