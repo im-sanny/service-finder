@@ -2,6 +2,8 @@ package handler
 
 import (
 	"net/http"
+	"strconv"
+	"strings"
 
 	"github.com/im-sanny/service-finder/model"
 	"github.com/im-sanny/service-finder/service"
@@ -13,10 +15,6 @@ type ProviderHandler struct {
 
 func NewProviderHandler(pvr service.Providers) *ProviderHandler {
 	return &ProviderHandler{pvr: pvr}
-}
-
-func (h *ProviderHandler) DeleteBatch(w http.ResponseWriter, r *http.Request){
-	
 }
 
 func (h *ProviderHandler) CreateBatch(w http.ResponseWriter, r *http.Request) {
@@ -119,4 +117,36 @@ func (h *ProviderHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *ProviderHandler) DeleteBatch(w http.ResponseWriter, r *http.Request) {
+	// Parse comma-separated IDs from query string
+	idsParam := r.URL.Query().Get("ids")
+	if idsParam == "" {
+		http.Error(w, "ids query parameter is required", http.StatusBadRequest)
+		return
+	}
+
+	// Split and parse IDs
+	idStrings := strings.Split(idsParam, ",")
+	ids := make([]int64, 0, len(idStrings))
+	for i, idStr := range idStrings {
+		id, err := strconv.ParseInt(strings.TrimSpace(idStr), 10, 64)
+		if err != nil {
+			http.Error(w, "invalid id format at position "+strconv.Itoa(i), http.StatusBadRequest)
+			return
+		}
+		ids = append(ids, id)
+	}
+
+	// Call service layer
+	deleted, err := h.pvr.DeleteBatch(ids)
+	if err != nil {
+		respondError(w, err)
+		return
+	}
+
+	// Return count of deleted rows
+	response := map[string]int64{"deleted": deleted}
+	writeJSON(w, http.StatusOK, response)
 }
