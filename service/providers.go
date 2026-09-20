@@ -33,40 +33,6 @@ func NewProvider(repo repository.ProviderRepository, serviceRepo repository.Serv
 	}
 }
 
-func (s *provider) DeleteBatch(ids []int64) (int64, error) {
-	// 1. Validate: slice not empty
-	if len(ids) == 0 {
-		return 0, fmt.Errorf("ids list is empty: %w", ErrInvalidInput)
-	}
-
-	// 2. Validate all ids are positive
-	for i, id := range ids {
-		if id <= 0 {
-			return 0, fmt.Errorf("id at index %d is invalid: %w", i, ErrInvalidInput)
-		}
-	}
-
-	// 3. Start transaction
-	tx, err := s.repo.BeginTx()
-	if err != nil {
-		return 0, fmt.Errorf("failed to start transaction: %w", err)
-	}
-	defer tx.Rollback()
-
-	// 4. Batch delete
-	deleted, err := s.repo.DeleteBatch(tx, ids)
-	if err != nil {
-		return 0, fmt.Errorf("batch delete failed: %w", err)
-	}
-
-	// 5. Commit transaction
-	if err := tx.Commit(); err != nil {
-		return 0, fmt.Errorf("failed to commit transaction: %w", err)
-	}
-
-	return deleted, nil
-}
-
 // CreateBatch creates multiple providers atomically
 func (s *provider) CreateBatch(prov []*model.Provider) ([]*model.Provider, error) {
 	// 1. Validate: slice is not empty
@@ -226,4 +192,38 @@ func (s *provider) Delete(id int64) error {
 		return fmt.Errorf("failed to delete provider %d: %w", id, err)
 	}
 	return nil
+}
+
+func (s *provider) DeleteBatch(ids []int64) (int64, error) {
+	// 1. Validate: slice not empty
+	if len(ids) == 0 {
+		return 0, fmt.Errorf("ids list is empty: %w", ErrInvalidInput)
+	}
+
+	// 2. Validate all ids are positive
+	for i, id := range ids {
+		if id <= 0 {
+			return 0, fmt.Errorf("id at index %d is invalid: %w", i, ErrInvalidInput)
+		}
+	}
+
+	// 3. Start transaction
+	tx, err := s.repo.BeginTx()
+	if err != nil {
+		return 0, fmt.Errorf("failed to start transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	// 4. Batch delete
+	deleted, err := s.repo.DeleteBatch(tx, ids)
+	if err != nil {
+		return 0, fmt.Errorf("batch delete failed: %w", err)
+	}
+
+	// 5. Commit transaction
+	if err := tx.Commit(); err != nil {
+		return 0, fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	return deleted, nil
 }

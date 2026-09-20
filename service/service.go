@@ -27,6 +27,7 @@ type Service interface {
 	Delete(id int64) error
 
 	CreateBatch(s []*model.Service) ([]*model.Service, error)
+	DeleteBatch(ids []int64) (int64, error)
 }
 
 // service is the PRIVATE implementation.
@@ -151,4 +152,38 @@ func (s *service) Delete(id int64) error {
 		return fmt.Errorf("delete service %d: %w", id, err)
 	}
 	return nil
+}
+
+func (s *service) DeleteBatch(ids []int64) (int64, error) {
+	// 1. Validate: slice not empty
+	if len(ids) == 0 {
+		return 0, fmt.Errorf("ids list is empty : %w", ErrInvalidInput)
+	}
+
+	// 2. Validate all IDs are Positive
+	for i, id := range ids {
+		if id <= 0 {
+			return 0, fmt.Errorf("id at index %d is invalid: %w", i, ErrInvalidInput)
+		}
+	}
+
+	// 3. Start transaction
+	tx, err := s.repo.BeginTx()
+	if err != nil {
+		return 0, fmt.Errorf("failed to start transaction: %w", err)
+	}
+	tx.Rollback()
+
+	// 4. Batch delete
+	deleted, err := s.repo.DeleteBatch(tx, ids)
+	if err != nil {
+		return 0, fmt.Errorf("batch delete failed: %w", err)
+	}
+
+	// 5. Commit transaction
+	if err := tx.Commit(); err != nil {
+		return 0, fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	return deleted, nil
 }
