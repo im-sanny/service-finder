@@ -2,6 +2,8 @@ package handler
 
 import (
 	"net/http"
+	"strconv"
+	"strings"
 
 	"github.com/im-sanny/service-finder/model"
 	"github.com/im-sanny/service-finder/service"
@@ -118,4 +120,36 @@ func (h *ServiceHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusNoContent, nil)
+}
+
+func (h *ServiceHandler) DeleteBatch(w http.ResponseWriter, r *http.Request) {
+	// Parse comma-separated IDs from query string
+	idsParam := r.URL.Query().Get("ids")
+	if idsParam == "" {
+		http.Error(w, "ids query parameter is required", http.StatusBadRequest)
+		return
+	}
+
+	// Split and parse IDs
+	idString := strings.Split(idsParam, ",")
+	ids := make([]int64, 0, len(idString))
+	for i, idStr := range idString {
+		id, err := strconv.ParseInt(strings.TrimSpace(idStr), 10, 64)
+		if err != nil {
+			http.Error(w, "invalid id format at position"+strconv.Itoa(i), http.StatusBadRequest)
+			return
+		}
+		ids = append(ids, id)
+	}
+
+	// call service layer
+	deleted, err := h.svc.DeleteBatch(ids)
+	if err != nil {
+		respondError(w, err)
+		return
+	}
+
+	// Return count of deleted row
+	response := map[string]int64{"deleted": deleted}
+	writeJSON(w, http.StatusOK, response)
 }
