@@ -15,6 +15,10 @@ func NewProviderHandler(pvr service.Providers) *ProviderHandler {
 	return &ProviderHandler{pvr: pvr}
 }
 
+func (h *ProviderHandler) DeleteBatch(w http.ResponseWriter, r *http.Request){
+	
+}
+
 func (h *ProviderHandler) CreateBatch(w http.ResponseWriter, r *http.Request) {
 	var providers []*model.Provider
 	if !decodeJSON(w, r, &providers) {
@@ -26,7 +30,7 @@ func (h *ProviderHandler) CreateBatch(w http.ResponseWriter, r *http.Request) {
 		respondError(w, err)
 		return
 	}
-	
+
 	writeJSON(w, http.StatusCreated, created)
 }
 

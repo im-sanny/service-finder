@@ -18,6 +18,7 @@ type Providers interface {
 	Delete(id int64) error
 
 	CreateBatch(p []*model.Provider) ([]*model.Provider, error)
+	DeleteBatch(ids []int64) (int64, error)
 }
 
 type provider struct {
@@ -30,6 +31,40 @@ func NewProvider(repo repository.ProviderRepository, serviceRepo repository.Serv
 		repo:        repo,
 		serviceRepo: serviceRepo,
 	}
+}
+
+func (s *provider) DeleteBatch(ids []int64) (int64, error) {
+	// 1. Validate: slice not empty
+	if len(ids) == 0 {
+		return 0, fmt.Errorf("ids list is empty: %w", ErrInvalidInput)
+	}
+
+	// 2. Validate all ids are positive
+	for i, id := range ids {
+		if id <= 0 {
+			return 0, fmt.Errorf("id at index %d is invalid: %w", i, ErrInvalidInput)
+		}
+	}
+
+	// 3. Start transaction
+	tx, err := s.repo.BeginTx()
+	if err != nil {
+		return 0, fmt.Errorf("failed to start transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	// 4. Batch delete
+	deleted, err := s.repo.DeleteBatch(tx, ids)
+	if err != nil {
+		return 0, fmt.Errorf("batch delete failed: %w", err)
+	}
+
+	// 5. Commit transaction
+	if err := tx.Commit(); err != nil {
+		return 0, fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	return deleted, nil
 }
 
 // CreateBatch creates multiple providers atomically
@@ -66,7 +101,7 @@ func (s *provider) CreateBatch(prov []*model.Provider) ([]*model.Provider, error
 	if err != nil {
 		return nil, fmt.Errorf("failed to begin transaction: %w", err)
 	}
-	
+
 	// Ensure rollback on any error (safe to call even after commit)h
 	defer tx.Rollback()
 
