@@ -60,19 +60,23 @@ func main() {
 	pvr := service.NewProvider(providerRepo, serviceRepo)
 	pH := handler.NewProviderHandler(pvr)
 
+	mux.HandleFunc("POST /services/batch", sH.CreateBatch)
 	mux.HandleFunc("POST /services", sH.Create)
 	mux.HandleFunc("GET /services", sH.GetAll)
 	mux.HandleFunc("GET /services/{id}", sH.GetByID)
 	mux.HandleFunc("PUT /services/{id}", sH.Update)
 	mux.HandleFunc("PATCH /services/{id}", sH.Patch)
 	mux.HandleFunc("DELETE /services/{id}", sH.Delete)
+	mux.HandleFunc("DELETE /services/batch/{id}", sH.DeleteBatch)
 
+	mux.HandleFunc("POST /providers/batch", pH.CreateBatch)
 	mux.HandleFunc("POST /providers", pH.Create)
 	mux.HandleFunc("GET /providers", pH.GetAll)
 	mux.HandleFunc("GET /providers/{id}", pH.GetByID)
 	mux.HandleFunc("PUT /providers/{id}", pH.Update)
 	mux.HandleFunc("PATCH /providers/{id}", pH.Patch)
 	mux.HandleFunc("DELETE /providers/{id}", pH.Delete)
+	mux.HandleFunc("DELETE /providers/batch/{id}", pH.DeleteBatch)
 
 	log.Printf("Server running on port :%s", port)
 	log.Fatal(http.ListenAndServe(":"+port, mux))

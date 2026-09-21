@@ -37,11 +37,12 @@ func (r *ppr) BeginTx() (*sql.Tx, error) {
 
 // CreateBatch inserts multiple providers using a prepared statement within a transaction
 func (r *ppr) CreateBatch(tx *sql.Tx, providers []*model.Provider) error {
+	// Prepare once, execute many times
 	stmt, err := tx.Prepare(`
 	INSERT INTO providers (name, phone, location, description, service_id)
 	VALUES ($1, $2, $3, $4, $5)
 	RETURNING id, created_at, updated_at
-	`)
+	`) // // Prepare the statement ONCE
 	if err != nil {
 		return fmt.Errorf("failed to prepare batch insert: %w", err)
 	}
