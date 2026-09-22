@@ -56,7 +56,14 @@ func (s *service) CreateBatch(svc []*model.Service) ([]*model.Service, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to begin transaction: %w", err)
 	}
-	defer tx.Rollback()
+
+	// Defer a cleanup function that checks the named 'err' variable
+	defer func() {
+		if err != nil {
+			// If we are exiting with an error, try to rollback to clean up DB locks
+			tx.Rollback()
+		}
+	}()
 
 	if err := s.repo.CreateBatch(tx, svc); err != nil {
 		return nil, fmt.Errorf("batch insert failed: %w", err)

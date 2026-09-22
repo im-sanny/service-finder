@@ -69,7 +69,13 @@ func (s *provider) CreateBatch(prov []*model.Provider) ([]*model.Provider, error
 	}
 
 	// Ensure rollback on any error (safe to call even after commit)h
-	defer tx.Rollback()
+	// Defer a cleanup function that checks the named 'err' variable
+	defer func() {
+		if err != nil {
+			// If we are exiting with an error, try to rollback to clean up DB locks
+			tx.Rollback()
+		}
+	}()
 
 	// 5. Batch insert
 	if err := s.repo.CreateBatch(tx, prov); err != nil {
