@@ -157,7 +157,7 @@ func (s *service) Delete(id int64) error {
 func (s *service) DeleteBatch(ids []int64) (int64, error) {
 	// 1. Validate: slice not empty
 	if len(ids) == 0 {
-		return 0, fmt.Errorf("ids list is empty : %w", ErrInvalidInput)
+		return 0, fmt.Errorf("ids list is empty: %w", ErrInvalidInput)
 	}
 
 	// 2. Validate all IDs are Positive
@@ -172,15 +172,22 @@ func (s *service) DeleteBatch(ids []int64) (int64, error) {
 	if err != nil {
 		return 0, fmt.Errorf("failed to start transaction: %w", err)
 	}
-	tx.Rollback()
 
-	// 4. Batch delete
+	// 4. Defer a cleanup function that checks the named 'err' variable
+	defer func() {
+		if err != nil {
+			// If we are exiting with an error, try to rollback to clean up DB locks
+			tx.Rollback()
+		}
+	}()
+
+	// 5. Batch delete
 	deleted, err := s.repo.DeleteBatch(tx, ids)
 	if err != nil {
 		return 0, fmt.Errorf("batch delete failed: %w", err)
 	}
 
-	// 5. Commit transaction
+	// 6. Commit transaction
 	if err := tx.Commit(); err != nil {
 		return 0, fmt.Errorf("failed to commit transaction: %w", err)
 	}
