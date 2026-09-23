@@ -11,7 +11,7 @@ import (
 
 type ProviderRepository interface {
 	Create(p *model.Provider) error
-	GetAll() ([]model.Provider, error)
+	GetAll(page, limit int) ([]model.Provider, error)
 	GetById(id int64) (*model.Provider, error)
 	Update(p *model.Provider) error
 	Patch(id int64, name, phone, location, description *string, serviceID *int64) (*model.Provider, error)
@@ -74,10 +74,15 @@ func (r *ppr) Create(p *model.Provider) error {
 	return nil
 }
 
-func (r *ppr) GetAll() ([]model.Provider, error) {
+func (r *ppr) GetAll(page, limit int) ([]model.Provider, error) {
+	offset := (page - 1) * limit
+
 	rows, err := r.db.Query(`
 		SELECT id, name, phone, location, description, service_id, created_at, updated_at
-		FROM providers`)
+		FROM providers
+		ORDER by ASC
+		limit $1 offset $2
+		`, limit, offset)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query providers: %w", err)
 	}

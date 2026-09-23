@@ -47,7 +47,20 @@ func (h *ProviderHandler) Create(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *ProviderHandler) GetAll(w http.ResponseWriter, r *http.Request) {
-	providers, err := h.pvr.GetAll()
+	pageStr := r.URL.Query().Get("page")
+	limitStr := r.URL.Query().Get("limit")
+
+	page := 1
+	limit := 10
+
+	if p, err := strconv.Atoi(pageStr); err == nil && p > 0 {
+		page = 1
+	}
+	if l, err := strconv.Atoi(limitStr); err == nil && l > 0 {
+		limit = 10
+	}
+
+	providers, err := h.pvr.GetAll(page, limit)
 	if err != nil {
 		respondError(w, err)
 		return
