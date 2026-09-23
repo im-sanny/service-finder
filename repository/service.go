@@ -11,7 +11,7 @@ import (
 
 // ServiceRepository defines the contract for service data operations.
 type ServiceRepository interface {
-	GetAll() ([]model.Service, error)
+	GetAll(page, limit int) ([]model.Service, error)
 	GetById(id int64) (*model.Service, error)
 	Create(s *model.Service) error
 	Update(s *model.Service) error
@@ -70,8 +70,15 @@ func (r *psr) Create(s *model.Service) error {
 	return nil
 }
 
-func (r *psr) GetAll() ([]model.Service, error) {
-	rows, err := r.db.Query(`SELECT id, name, description, created_at, updated_at FROM services;`)
+func (r *psr) GetAll(page, limit int) ([]model.Service, error) {
+	offset := (page - 1) * limit
+	rows, err := r.db.Query(`
+	SELECT id, name, description, created_at, updated_at
+	FROM services
+	ORDER BY id ASC
+	LIMIT $1 OFFSET $2
+	`, limit, offset)
+
 	if err != nil {
 		return nil, fmt.Errorf("failed to query all services: %w", err)
 	}

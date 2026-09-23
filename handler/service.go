@@ -49,7 +49,20 @@ func (h *ServiceHandler) Create(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *ServiceHandler) GetAll(w http.ResponseWriter, r *http.Request) {
-	services, err := h.svc.GetAll()
+	pageStr := r.URL.Query().Get("page")
+	limitStr := r.URL.Query().Get("limit")
+
+	page := 1
+	limit := 10
+
+	if p, err := strconv.Atoi(pageStr); err == nil && p > 0 {
+		page = p
+	}
+	if l, err := strconv.Atoi(limitStr); err == nil && l > 0 {
+		limit = l
+	}
+
+	services, err := h.svc.GetAll(page, limit)
 	if err != nil {
 		respondError(w, err)
 		return
