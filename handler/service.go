@@ -62,12 +62,20 @@ func (h *ServiceHandler) GetAll(w http.ResponseWriter, r *http.Request) {
 		limit = l
 	}
 
-	services, err := h.svc.GetAll(page, limit)
+	services, total, err := h.svc.GetAll(page, limit)
 	if err != nil {
 		respondError(w, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, services)
+
+	response := map[string]any{
+		"data":  services,
+		"total": total,
+		"page":  page,
+		"limit": limit,
+	}
+	
+	writeJSON(w, http.StatusOK, response)
 }
 
 func (h *ServiceHandler) GetByID(w http.ResponseWriter, r *http.Request) {

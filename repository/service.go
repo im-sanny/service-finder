@@ -11,7 +11,7 @@ import (
 
 // ServiceRepository defines the contract for service data operations.
 type ServiceRepository interface {
-	GetAll(page, limit int) ([]model.Service, error)
+	GetAll(page, limit int) ([]model.Service, int64, error)
 	GetById(id int64) (*model.Service, error)
 	Create(s *model.Service) error
 	Update(s *model.Service) error
@@ -70,7 +70,13 @@ func (r *psr) Create(s *model.Service) error {
 	return nil
 }
 
-func (r *psr) GetAll(page, limit int) ([]model.Service, error) {
+func (r *psr) GetAll(page, limit int) ([]model.Service, int64, error) {
+	var total int64
+	err := r.db.QueryRow(`SELECT COUNT(*) FROM providers`).Scan(&total)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to count providers:%w", err)
+	}
+
 	offset := (page - 1) * limit
 	rows, err := r.db.Query(`
 	SELECT id, name, description, created_at, updated_at
@@ -80,7 +86,7 @@ func (r *psr) GetAll(page, limit int) ([]model.Service, error) {
 	`, limit, offset)
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to query all services: %w", err)
+		return nil, 0, fmt.Errorf("failed to query all services: %w", err)
 	}
 
 	defer rows.Close() // When this handler finishes, close the rows automatically.
@@ -93,15 +99,15 @@ func (r *psr) GetAll(page, limit int) ([]model.Service, error) {
 	for rows.Next() {
 		var s model.Service
 		if err := rows.Scan(&s.ID, &s.Name, &s.Description, &s.CreatedAt, &s.UpdatedAt); err != nil {
-			return nil, fmt.Errorf("failed to scan service row: %w", err)
+			return nil, 0, fmt.Errorf("failed to scan service row: %w", err)
 		}
 		services = append(services, s)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("error encountered during row iteration: %w", err)
+		return nil, 0, fmt.Errorf("error encountered during row iteration: %w", err)
 	}
 
-	return services, nil
+	return services, total, nil
 }
 
 func (r *psr) GetById(id int64) (*model.Service, error) {
