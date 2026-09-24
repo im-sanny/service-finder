@@ -60,13 +60,20 @@ func (h *ProviderHandler) GetAll(w http.ResponseWriter, r *http.Request) {
 		limit = 10
 	}
 
-	providers, err := h.pvr.GetAll(page, limit)
+	providers, total, err := h.pvr.GetAll(page, limit)
 	if err != nil {
 		respondError(w, err)
 		return
 	}
 
-	writeJSON(w, http.StatusOK, providers)
+	response := map[string]any{
+		"data":  providers,
+		"total": total,
+		"page":  page,
+		"limit": limit,
+	}
+
+	writeJSON(w, http.StatusOK, response)
 }
 
 func (h *ProviderHandler) GetByID(w http.ResponseWriter, r *http.Request) {

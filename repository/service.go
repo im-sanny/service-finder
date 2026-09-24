@@ -72,9 +72,9 @@ func (r *psr) Create(s *model.Service) error {
 
 func (r *psr) GetAll(page, limit int) ([]model.Service, int64, error) {
 	var total int64
-	err := r.db.QueryRow(`SELECT COUNT(*) FROM providers`).Scan(&total)
+	err := r.db.QueryRow(`SELECT COUNT(*) FROM services`).Scan(&total)
 	if err != nil {
-		return nil, 0, fmt.Errorf("failed to count providers:%w", err)
+		return nil, 0, fmt.Errorf("failed to count services:%w", err)
 	}
 
 	offset := (page - 1) * limit

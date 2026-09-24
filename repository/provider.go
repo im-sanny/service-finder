@@ -11,7 +11,7 @@ import (
 
 type ProviderRepository interface {
 	Create(p *model.Provider) error
-	GetAll(page, limit int) ([]model.Provider, error)
+	GetAll(page, limit int) ([]model.Provider, int64, error)
 	GetById(id int64) (*model.Provider, error)
 	Update(p *model.Provider) error
 	Patch(id int64, name, phone, location, description *string, serviceID *int64) (*model.Provider, error)
@@ -74,7 +74,12 @@ func (r *ppr) Create(p *model.Provider) error {
 	return nil
 }
 
-func (r *ppr) GetAll(page, limit int) ([]model.Provider, error) {
+func (r *ppr) GetAll(page, limit int) ([]model.Provider, int64, error) {
+	var total int64
+	err := r.db.QueryRow(`SELECT COUNT(*) FROM providers`).Scan(&total)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to count providers: %w", err)
+	}
 	offset := (page - 1) * limit
 
 	rows, err := r.db.Query(`
@@ -84,7 +89,7 @@ func (r *ppr) GetAll(page, limit int) ([]model.Provider, error) {
 		limit $1 offset $2
 		`, limit, offset)
 	if err != nil {
-		return nil, fmt.Errorf("failed to query providers: %w", err)
+		return nil, 0, fmt.Errorf("failed to query providers: %w", err)
 	}
 	defer rows.Close()
 
@@ -92,15 +97,15 @@ func (r *ppr) GetAll(page, limit int) ([]model.Provider, error) {
 	for rows.Next() {
 		var p model.Provider
 		if err := rows.Scan(&p.ID, &p.Name, &p.Phone, &p.Location, &p.Description, &p.ServiceID, &p.CreatedAt, &p.UpdatedAt); err != nil {
-			return nil, fmt.Errorf("failed to scan provider row: %w", err)
+			return nil, 0, fmt.Errorf("failed to scan provider row: %w", err)
 		}
 		providers = append(providers, p)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("error during provider iteration: %w", err)
+		return nil, 0, fmt.Errorf("error during provider iteration: %w", err)
 	}
 
-	return providers, nil
+	return providers, total, nil
 }
 
 func (r *ppr) GetById(id int64) (*model.Provider, error) {
