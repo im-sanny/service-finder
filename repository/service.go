@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/im-sanny/service-finder/model"
 	"github.com/lib/pq"
@@ -11,7 +12,7 @@ import (
 
 // ServiceRepository defines the contract for service data operations.
 type ServiceRepository interface {
-	GetAll(page, limit int) ([]model.Service, int64, error)
+	GetAll(page, limit int, filters map[string]string) ([]model.Service, int64, error)
 	GetById(id int64) (*model.Service, error)
 	Create(s *model.Service) error
 	Update(s *model.Service) error
@@ -70,25 +71,39 @@ func (r *psr) Create(s *model.Service) error {
 	return nil
 }
 
-func (r *psr) GetAll(page, limit int) ([]model.Service, int64, error) {
+func (r *psr) GetAll(page, limit int, filters map[string]string) ([]model.Service, int64, error) {
+	query := `SELECT id, name, description FROM services`
+	countQuery := `COUNT (*) FROM services`
+
+	var args []interface{}
+	argsIndex := 1
+	whereClauses := []string{}
+
+	if srv, ok := filters["name"]; ok && srv != "" {
+		whereClauses = append(whereClauses, fmt.Sprintf("name $%d", argsIndex))
+		args = append(args, "%"+srv+"%")
+		argsIndex++
+	}
+
+	if len(whereClauses) > 0 {
+		whereSQL := " WHERE " + strings.Join(whereClauses, " AND ")
+		query += whereSQL
+		countQuery += whereSQL
+	}
+
+	query += fmt.Sprintf("ORDER BY id ASC LIMIT $%d OFFSET $%d", argsIndex, argsIndex+1)
+	args = append(args, limit, (page-1)*limit)
+
 	var total int64
-	err := r.db.QueryRow(`SELECT COUNT(*) FROM services`).Scan(&total)
+	err := r.db.QueryRow(countQuery, args[:len(args)-2]...).Scan(&total)
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to count services:%w", err)
 	}
 
-	offset := (page - 1) * limit
-	rows, err := r.db.Query(`
-	SELECT id, name, description, created_at, updated_at
-	FROM services
-	ORDER BY id ASC
-	LIMIT $1 OFFSET $2
-	`, limit, offset)
-
+	rows, err := r.db.Query(query, args...)
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to query all services: %w", err)
 	}
-
 	defer rows.Close() // When this handler finishes, close the rows automatically.
 
 	var services []model.Service
