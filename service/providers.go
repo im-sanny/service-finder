@@ -11,7 +11,7 @@ import (
 
 type Providers interface {
 	Create(p *model.Provider) error
-	GetAll(page, limit int) ([]model.Provider, int64, error)
+	GetAll(page, limit int, filters map[string]string) ([]model.Provider, int64, error)
 	GetByID(id int64) (*model.Provider, error)
 	Update(p *model.Provider) error
 	Patch(id int64, name, phone, location, description *string, serviceID *int64) (*model.Provider, error)
@@ -110,7 +110,7 @@ func (s *provider) Create(p *model.Provider) error {
 	return nil
 }
 
-func (s *provider) GetAll(page, limit int) ([]model.Provider, int64, error) {
+func (s *provider) GetAll(page, limit int, filters map[string]string) ([]model.Provider, int64, error) {
 	if page < 1 {
 		page = 1
 	}
@@ -118,7 +118,7 @@ func (s *provider) GetAll(page, limit int) ([]model.Provider, int64, error) {
 		limit = 10
 	}
 
-	providers, total, err := s.repo.GetAll(page, limit)
+	providers, total, err := s.repo.GetAll(page, limit, filters)
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to get all providers: %w", err)
 	}

@@ -50,6 +50,15 @@ func (h *ProviderHandler) GetAll(w http.ResponseWriter, r *http.Request) {
 	pageStr := r.URL.Query().Get("page")
 	limitStr := r.URL.Query().Get("limit")
 
+	filters := make(map[string]string)
+	if loc := r.URL.Query().Get("location"); loc != "" {
+		filters["location"] = loc
+	}
+
+	if sid := r.URL.Query().Get("service_id"); sid != "" {
+		filters["service_id"] = sid
+	}
+
 	page := 1
 	limit := 10
 
@@ -60,7 +69,7 @@ func (h *ProviderHandler) GetAll(w http.ResponseWriter, r *http.Request) {
 		limit = 10
 	}
 
-	providers, total, err := h.pvr.GetAll(page, limit)
+	providers, total, err := h.pvr.GetAll(page, limit, filters)
 	if err != nil {
 		respondError(w, err)
 		return
