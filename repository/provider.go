@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/im-sanny/service-finder/model"
 	"github.com/lib/pq"
@@ -11,7 +12,7 @@ import (
 
 type ProviderRepository interface {
 	Create(p *model.Provider) error
-	GetAll(page, limit int) ([]model.Provider, int64, error)
+	GetAll(page, limit int, filters map[string]string) ([]model.Provider, int64, error)
 	GetById(id int64) (*model.Provider, error)
 	Update(p *model.Provider) error
 	Patch(id int64, name, phone, location, description *string, serviceID *int64) (*model.Provider, error)
@@ -74,20 +75,42 @@ func (r *ppr) Create(p *model.Provider) error {
 	return nil
 }
 
-func (r *ppr) GetAll(page, limit int) ([]model.Provider, int64, error) {
+func (r *ppr) GetAll(page, limit int, filters map[string]string) ([]model.Provider, int64, error) {
+	query := `SELECT id, name, phone, location, description, service_id, created_at, updated_at FROM providers`
+	countQuery := `SELECT COUNT(*) FROM providers`
+
+	var args []interface{}
+	argIndex := 1
+	whereClauses := []string{}
+
+	if loc, ok := filters["location"]; ok && loc != "" {
+		whereClauses = append(whereClauses, fmt.Sprintf("location ILIKE $%d", argIndex))
+		args = append(args, "%"+loc+"%")
+		argIndex++
+	}
+
+	if sid, ok := filters["service_id"]; ok && sid != "" {
+		whereClauses = append(whereClauses, fmt.Sprintf("service_id = $%d", argIndex))
+		args = append(args, sid)
+		argIndex++
+	}
+
+	if len(whereClauses) > 0 {
+		whereSQL := " WHERE " + strings.Join(whereClauses, " AND ")
+		query += whereSQL
+		countQuery += whereSQL
+	}
+
+	query += fmt.Sprintf("ORDER BY id ASC LIMIT $%d OFFSET $%d", argIndex, argIndex+1)
+	args = append(args, limit, (page-1)*limit)
+
 	var total int64
-	err := r.db.QueryRow(`SELECT COUNT(*) FROM providers`).Scan(&total)
+	err := r.db.QueryRow(countQuery, args[:len(args)-2]...).Scan(&total)
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to count providers: %w", err)
 	}
-	offset := (page - 1) * limit
 
-	rows, err := r.db.Query(`
-		SELECT id, name, phone, location, description, service_id, created_at, updated_at
-		FROM providers
-		ORDER by ASC
-		limit $1 offset $2
-		`, limit, offset)
+	rows, err := r.db.Query(query, args...)
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to query providers: %w", err)
 	}
