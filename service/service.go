@@ -20,7 +20,7 @@ var (
 // Handlers depend on THIS interface, never on the repository directly.
 type Service interface {
 	Create(s *model.Service) error
-	GetAll(page, limit int) ([]model.Service, int64, error)
+	GetAll(page, limit int, filters map[string]string) ([]model.Service, int64, error)
 	GetByID(id int64) (*model.Service, error)
 	Update(s *model.Service) error
 	Patch(id int64, name, description *string) (*model.Service, error)
@@ -90,7 +90,7 @@ func (s *service) Create(svc *model.Service) error {
 	return nil
 }
 
-func (s *service) GetAll(page, limit int) ([]model.Service, int64, error) {
+func (s *service) GetAll(page, limit int, filters map[string]string) ([]model.Service, int64, error) {
 	if page < 1 {
 		page = 1
 	}
@@ -98,7 +98,7 @@ func (s *service) GetAll(page, limit int) ([]model.Service, int64, error) {
 		limit = 10
 	}
 
-	services, total, err := s.repo.GetAll(page, limit)
+	services, total, err := s.repo.GetAll(page, limit, filters)
 	if err != nil {
 		return nil, 0, fmt.Errorf("get all services: %w", err)
 	}

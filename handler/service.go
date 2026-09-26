@@ -52,6 +52,11 @@ func (h *ServiceHandler) GetAll(w http.ResponseWriter, r *http.Request) {
 	pageStr := r.URL.Query().Get("page")
 	limitStr := r.URL.Query().Get("limit")
 
+	filters := make(map[string]string)
+	if n := r.URL.Query().Get("name"); n != "" {
+		filters["name"] = n
+	}
+
 	page := 1
 	limit := 10
 
@@ -62,7 +67,7 @@ func (h *ServiceHandler) GetAll(w http.ResponseWriter, r *http.Request) {
 		limit = l
 	}
 
-	services, total, err := h.svc.GetAll(page, limit)
+	services, total, err := h.svc.GetAll(page, limit, filters)
 	if err != nil {
 		respondError(w, err)
 		return
@@ -74,7 +79,7 @@ func (h *ServiceHandler) GetAll(w http.ResponseWriter, r *http.Request) {
 		"page":  page,
 		"limit": limit,
 	}
-	
+
 	writeJSON(w, http.StatusOK, response)
 }
 
