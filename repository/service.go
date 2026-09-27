@@ -73,7 +73,7 @@ func (r *psr) Create(s *model.Service) error {
 
 func (r *psr) GetAll(page, limit int, filters map[string]string) ([]model.Service, int64, error) {
 	query := `SELECT id, name, description FROM services`
-	countQuery := `COUNT (*) FROM services`
+	countQuery := `SELECT COUNT(*) FROM services`
 
 	var args []interface{}
 	argsIndex := 1
@@ -91,7 +91,7 @@ func (r *psr) GetAll(page, limit int, filters map[string]string) ([]model.Servic
 		countQuery += whereSQL
 	}
 
-	query += fmt.Sprintf("ORDER BY id ASC LIMIT $%d OFFSET $%d", argsIndex, argsIndex+1)
+	query += fmt.Sprintf(" ORDER BY id ASC LIMIT $%d OFFSET $%d", argsIndex, argsIndex+1)
 	args = append(args, limit, (page-1)*limit)
 
 	var total int64

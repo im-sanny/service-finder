@@ -101,7 +101,7 @@ func (r *ppr) GetAll(page, limit int, filters map[string]string) ([]model.Provid
 		countQuery += whereSQL
 	}
 
-	query += fmt.Sprintf("ORDER BY id ASC LIMIT $%d OFFSET $%d", argIndex, argIndex+1)
+	query += fmt.Sprintf(" ORDER BY id ASC LIMIT $%d OFFSET $%d", argIndex, argIndex+1)
 	args = append(args, limit, (page-1)*limit)
 
 	var total int64
