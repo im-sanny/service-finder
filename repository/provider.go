@@ -76,35 +76,41 @@ func (r *ppr) Create(p *model.Provider) error {
 }
 
 func (r *ppr) GetAll(page, limit int, filters map[string]string) ([]model.Provider, int64, error) {
+	// Base queries that will be modified based on user input
 	query := `SELECT id, name, phone, location, description, service_id, created_at, updated_at FROM providers`
 	countQuery := `SELECT COUNT(*) FROM providers`
 
-	var args []interface{}
-	argIndex := 1
-	whereClauses := []string{}
+	var args []interface{}     // Stores the actual values for $1, $2, etc.
+	argIndex := 1              // Tracks the current placeholder number
+	whereClauses := []string{} // Collects individual filter conditions
 
+	// Filter by Location (Case-insensitive partial match)
 	if loc, ok := filters["location"]; ok && loc != "" {
 		whereClauses = append(whereClauses, fmt.Sprintf("location ILIKE $%d", argIndex))
-		args = append(args, "%"+loc+"%")
+		args = append(args, "%"+loc+"%") // Wrap in % for "contains" logic
 		argIndex++
 	}
 
+	// Filter by Service ID (Exact match)
 	if sid, ok := filters["service_id"]; ok && sid != "" {
 		whereClauses = append(whereClauses, fmt.Sprintf("service_id = $%d", argIndex))
 		args = append(args, sid)
 		argIndex++
 	}
 
+	// Combine all active filters with AND
 	if len(whereClauses) > 0 {
 		whereSQL := " WHERE " + strings.Join(whereClauses, " AND ")
 		query += whereSQL
 		countQuery += whereSQL
 	}
 
+	// Add ORDER BY, LIMIT, and OFFSET using the next available argIndex
 	query += fmt.Sprintf(" ORDER BY id ASC LIMIT $%d OFFSET $%d", argIndex, argIndex+1)
 	args = append(args, limit, (page-1)*limit)
 
 	var total int64
+	// We use args[:len(args)-2] to exclude LIMIT and OFFSET from the count
 	err := r.db.QueryRow(countQuery, args[:len(args)-2]...).Scan(&total)
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to count providers: %w", err)
@@ -116,6 +122,7 @@ func (r *ppr) GetAll(page, limit int, filters map[string]string) ([]model.Provid
 	}
 	defer rows.Close()
 
+	// Scan results into the model slice
 	var providers []model.Provider
 	for rows.Next() {
 		var p model.Provider
