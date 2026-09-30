@@ -106,8 +106,9 @@ func (r *ppr) GetAll(page, limit int, filters map[string]string) ([]model.Provid
 	}
 
 	// Add ORDER BY, LIMIT, and OFFSET using the next available argIndex
+	offset, safeLimit := CalculateOffset(page, limit)
 	query += fmt.Sprintf(" ORDER BY id ASC LIMIT $%d OFFSET $%d", argIndex, argIndex+1)
-	args = append(args, limit, (page-1)*limit)
+	args = append(args, safeLimit, offset)
 
 	var total int64
 	// We use args[:len(args)-2] to exclude LIMIT and OFFSET from the count

@@ -1,10 +1,14 @@
 package main
 
 import (
+	"context"
 	"embed"
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"github.com/im-sanny/service-finder/database"
 	"github.com/im-sanny/service-finder/handler"
@@ -78,6 +82,33 @@ func main() {
 	mux.HandleFunc("DELETE /providers/{id}", pH.Delete)
 	mux.HandleFunc("DELETE /providers/batch", pH.DeleteBatch)
 
-	log.Printf("Server running on port :%s", port)
-	log.Fatal(http.ListenAndServe(":"+port, mux))
+	// log.Printf("Server running on port :%s", port)
+	// log.Fatal(http.ListenAndServe(":"+port, mux))
+
+	server := &http.Server{
+		Addr:    ":" + port,
+		Handler: mux,
+	}
+
+	go func() {
+		log.Printf("Server running on port :%s", port)
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatal(err)
+		}
+	}()
+
+	// wait for interrupt signal
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+	log.Printf("Shutting down server...")
+
+	// give outstanding requests 5 seconds to complete
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := server.Shutdown(ctx); err != nil{
+		log.Fatal("Server forced to shutdown", err)
+	}
+
+	log.Printf("Server exited properly")
 }
