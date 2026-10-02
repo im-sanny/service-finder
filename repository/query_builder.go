@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"database/sql"
 	"fmt"
 	"strings"
 )
@@ -48,4 +49,11 @@ func BuildPaginatedQuery(cfg QueryConfig, filters map[string]string, page, limit
 	args = append(args, safeLimit, offset)
 
 	return baseQuery, countQuery, args, nil
+}
+
+func GetTotalCount(db *sql.DB, countQuery string, args []interface{}) (int64, error) {
+	var total int64
+	// Exclude the last 2 args (limit/offset) for the count
+	err := db.QueryRow(countQuery, args[:len(args)-2]...).Scan(&total)
+	return total, err
 }
