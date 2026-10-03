@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"strings"
 
 	"github.com/im-sanny/service-finder/model"
 	"github.com/lib/pq"
@@ -72,45 +71,27 @@ func (r *psr) Create(s *model.Service) error {
 }
 
 func (r *psr) GetAll(page, limit int, filters map[string]string) ([]model.Service, int64, error) {
-	query := `SELECT id, name, description FROM services`
-	countQuery := `SELECT COUNT(*) FROM services`
-
-	var args []interface{}
-	argsIndex := 1
-	whereClauses := []string{}
-
-	if srv, ok := filters["name"]; ok && srv != "" {
-		whereClauses = append(whereClauses, fmt.Sprintf("name $%d", argsIndex))
-		args = append(args, "%"+srv+"%")
-		argsIndex++
+	cfg := QueryConfig{
+		SelectCols: "idn name, description, created_at, updated_at",
+		FromTable:  "service",
 	}
-
-	if len(whereClauses) > 0 {
-		whereSQL := " WHERE " + strings.Join(whereClauses, " AND ")
-		query += whereSQL
-		countQuery += whereSQL
-	}
-
-	query += fmt.Sprintf(" ORDER BY id ASC LIMIT $%d OFFSET $%d", argsIndex, argsIndex+1)
-	args = append(args, limit, (page-1)*limit)
-
-	var total int64
-	err := r.db.QueryRow(countQuery, args[:len(args)-2]...).Scan(&total)
+	query, countQuery, args, err := BuildPaginatedQuery(cfg, filters, page, limit)
 	if err != nil {
-		return nil, 0, fmt.Errorf("failed to count services:%w", err)
+		return nil, 0, err
+	}
+
+	total, err := GetTotalCount(r.db, countQuery, args)
+	if err != nil {
+		return nil, 0, fmt.Errorf("Failed to count services: %w", err)
 	}
 
 	rows, err := r.db.Query(query, args...)
 	if err != nil {
-		return nil, 0, fmt.Errorf("failed to query all services: %w", err)
+		return nil, 0, fmt.Errorf("failed to query services: %w", err)
 	}
-	defer rows.Close() // When this handler finishes, close the rows automatically.
+	defer rows.Close()
 
 	var services []model.Service
-	// The loop basically means:
-	// "Give me the first row → scan it → put it in my slice.
-	// Give me the next row → scan it → put it in my slice.
-	// Keep going until there are no more rows."
 	for rows.Next() {
 		var s model.Service
 		if err := rows.Scan(&s.ID, &s.Name, &s.Description, &s.CreatedAt, &s.UpdatedAt); err != nil {
@@ -118,8 +99,9 @@ func (r *psr) GetAll(page, limit int, filters map[string]string) ([]model.Servic
 		}
 		services = append(services, s)
 	}
+
 	if err := rows.Err(); err != nil {
-		return nil, 0, fmt.Errorf("error encountered during row iteration: %w", err)
+		return nil, 0, fmt.Errorf("error during service iteration: %w", err)
 	}
 
 	return services, total, nil
