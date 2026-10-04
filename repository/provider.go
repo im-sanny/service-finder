@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"strings"
 
 	"github.com/im-sanny/service-finder/model"
 	"github.com/lib/pq"
@@ -76,43 +75,17 @@ func (r *ppr) Create(p *model.Provider) error {
 }
 
 func (r *ppr) GetAll(page, limit int, filters map[string]string) ([]model.Provider, int64, error) {
-	// Base queries that will be modified based on user input
-	query := `SELECT id, name, phone, location, description, service_id, created_at, updated_at FROM providers`
-	countQuery := `SELECT COUNT(*) FROM providers`
-
-	var args []interface{}     // Stores the actual values for $1, $2, etc.
-	argIndex := 1              // Tracks the current placeholder number
-	whereClauses := []string{} // Collects individual filter conditions
-
-	// Filter by Location (Case-insensitive partial match)
-	if loc, ok := filters["location"]; ok && loc != "" {
-		whereClauses = append(whereClauses, fmt.Sprintf("location ILIKE $%d", argIndex))
-		args = append(args, "%"+loc+"%") // Wrap in % for "contains" logic
-		argIndex++
+	cfg := QueryConfig{
+		SelectCols: "id, name, description, service_id, created_at, updated_at",
+		FromTable:  "providers",
 	}
 
-	// Filter by Service ID (Exact match)
-	if sid, ok := filters["service_id"]; ok && sid != "" {
-		whereClauses = append(whereClauses, fmt.Sprintf("service_id = $%d", argIndex))
-		args = append(args, sid)
-		argIndex++
+	query, countQuery, args, err := BuildPaginatedQuery(cfg, filters, page, limit)
+	if err != nil {
+		return nil, 0, err
 	}
 
-	// Combine all active filters with AND
-	if len(whereClauses) > 0 {
-		whereSQL := " WHERE " + strings.Join(whereClauses, " AND ")
-		query += whereSQL
-		countQuery += whereSQL
-	}
-
-	// Add ORDER BY, LIMIT, and OFFSET using the next available argIndex
-	offset, safeLimit := CalculateOffset(page, limit)
-	query += fmt.Sprintf(" ORDER BY id ASC LIMIT $%d OFFSET $%d", argIndex, argIndex+1)
-	args = append(args, safeLimit, offset)
-
-	var total int64
-	// We use args[:len(args)-2] to exclude LIMIT and OFFSET from the count
-	err := r.db.QueryRow(countQuery, args[:len(args)-2]...).Scan(&total)
+	total, err := GetTotalCount(r.db, countQuery, args)
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to count providers: %w", err)
 	}

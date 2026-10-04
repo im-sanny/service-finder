@@ -72,9 +72,10 @@ func (r *psr) Create(s *model.Service) error {
 
 func (r *psr) GetAll(page, limit int, filters map[string]string) ([]model.Service, int64, error) {
 	cfg := QueryConfig{
-		SelectCols: "idn name, description, created_at, updated_at",
-		FromTable:  "service",
+		SelectCols: "id, name, description, created_at, updated_at",
+		FromTable:  "services",
 	}
+
 	query, countQuery, args, err := BuildPaginatedQuery(cfg, filters, page, limit)
 	if err != nil {
 		return nil, 0, err
@@ -82,7 +83,7 @@ func (r *psr) GetAll(page, limit int, filters map[string]string) ([]model.Servic
 
 	total, err := GetTotalCount(r.db, countQuery, args)
 	if err != nil {
-		return nil, 0, fmt.Errorf("Failed to count services: %w", err)
+		return nil, 0, fmt.Errorf("failed to count services: %w", err)
 	}
 
 	rows, err := r.db.Query(query, args...)
@@ -91,6 +92,7 @@ func (r *psr) GetAll(page, limit int, filters map[string]string) ([]model.Servic
 	}
 	defer rows.Close()
 
+	// Only the scanning logic remains here!
 	var services []model.Service
 	for rows.Next() {
 		var s model.Service
@@ -99,7 +101,6 @@ func (r *psr) GetAll(page, limit int, filters map[string]string) ([]model.Servic
 		}
 		services = append(services, s)
 	}
-
 	if err := rows.Err(); err != nil {
 		return nil, 0, fmt.Errorf("error during service iteration: %w", err)
 	}
