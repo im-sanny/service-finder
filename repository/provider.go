@@ -76,7 +76,7 @@ func (r *ppr) Create(p *model.Provider) error {
 
 func (r *ppr) GetAll(page, limit int, filters map[string]string) ([]model.Provider, int64, error) {
 	cfg := QueryConfig{
-		SelectCols: "id, name, description, service_id, created_at, updated_at",
+		SelectCols: "id, name, description,phone, location, service_id, created_at, updated_at",
 		FromTable:  "providers",
 	}
 
