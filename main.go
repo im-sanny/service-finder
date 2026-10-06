@@ -12,6 +12,7 @@ import (
 
 	"github.com/im-sanny/service-finder/database"
 	"github.com/im-sanny/service-finder/handler"
+	"github.com/im-sanny/service-finder/middleware"
 	"github.com/im-sanny/service-finder/repository"
 	"github.com/im-sanny/service-finder/service"
 	"github.com/joho/godotenv"
@@ -64,26 +65,26 @@ func main() {
 	pvr := service.NewProvider(providerRepo, serviceRepo)
 	pH := handler.NewProviderHandler(pvr)
 
-	mux.HandleFunc("POST /services/batch", sH.CreateBatch)
-	mux.HandleFunc("POST /services", sH.Create)
+	// public routers
 	mux.HandleFunc("GET /services", sH.GetAll)
 	mux.HandleFunc("GET /services/{id}", sH.GetByID)
-	mux.HandleFunc("PUT /services/{id}", sH.Update)
-	mux.HandleFunc("PATCH /services/{id}", sH.Patch)
-	mux.HandleFunc("DELETE /services/{id}", sH.Delete)
-	mux.HandleFunc("DELETE /services/batch", sH.DeleteBatch)
-
-	mux.HandleFunc("POST /providers/batch", pH.CreateBatch)
-	mux.HandleFunc("POST /providers", pH.Create)
 	mux.HandleFunc("GET /providers", pH.GetAll)
 	mux.HandleFunc("GET /providers/{id}", pH.GetByID)
-	mux.HandleFunc("PUT /providers/{id}", pH.Update)
-	mux.HandleFunc("PATCH /providers/{id}", pH.Patch)
-	mux.HandleFunc("DELETE /providers/{id}", pH.Delete)
-	mux.HandleFunc("DELETE /providers/batch", pH.DeleteBatch)
 
-	// log.Printf("Server running on port :%s", port)
-	// log.Fatal(http.ListenAndServe(":"+port, mux))
+	// protected routers
+	mux.Handle("POST /services/batch", middleware.RequireAPIKey(http.HandlerFunc(sH.CreateBatch)))
+	mux.Handle("POST /services", middleware.RequireAPIKey(http.HandlerFunc(sH.Create)))
+	mux.Handle("PUT /services/{id}", middleware.RequireAPIKey(http.HandlerFunc(sH.Update)))
+	mux.Handle("PATCH /services/{id}", middleware.RequireAPIKey(http.HandlerFunc(sH.Patch)))
+	mux.Handle("DELETE /services/{id}", middleware.RequireAPIKey(http.HandlerFunc(sH.Delete)))
+	mux.Handle("DELETE /services/batch", middleware.RequireAPIKey(http.HandlerFunc(sH.DeleteBatch)))
+
+	mux.Handle("POST /providers/batch", middleware.RequireAPIKey(http.HandlerFunc(pH.CreateBatch)))
+	mux.Handle("POST /providers", middleware.RequireAPIKey(http.HandlerFunc(pH.Create)))
+	mux.Handle("PUT /providers/{id}", middleware.RequireAPIKey(http.HandlerFunc(pH.Update)))
+	mux.Handle("PATCH /providers/{id}", middleware.RequireAPIKey(http.HandlerFunc(pH.Patch)))
+	mux.Handle("DELETE /providers/{id}", middleware.RequireAPIKey(http.HandlerFunc(pH.Delete)))
+	mux.Handle("DELETE /providers/batch", middleware.RequireAPIKey(http.HandlerFunc(pH.DeleteBatch)))
 
 	server := &http.Server{
 		Addr:    ":" + port,
@@ -106,7 +107,7 @@ func main() {
 	// give outstanding requests 5 seconds to complete
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	if err := server.Shutdown(ctx); err != nil{
+	if err := server.Shutdown(ctx); err != nil {
 		log.Fatal("Server forced to shutdown", err)
 	}
 
