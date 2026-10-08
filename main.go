@@ -65,26 +65,7 @@ func main() {
 	pvr := service.NewProvider(providerRepo, serviceRepo)
 	pH := handler.NewProviderHandler(pvr)
 
-	// public routers
-	mux.HandleFunc("GET /services", sH.GetAll)
-	mux.HandleFunc("GET /services/{id}", sH.GetByID)
-	mux.HandleFunc("GET /providers", pH.GetAll)
-	mux.HandleFunc("GET /providers/{id}", pH.GetByID)
-
-	// protected routers
-	mux.Handle("POST /services/batch", middleware.RequireAPIKey(http.HandlerFunc(sH.CreateBatch)))
-	mux.Handle("POST /services", middleware.RequireAPIKey(http.HandlerFunc(sH.Create)))
-	mux.Handle("PUT /services/{id}", middleware.RequireAPIKey(http.HandlerFunc(sH.Update)))
-	mux.Handle("PATCH /services/{id}", middleware.RequireAPIKey(http.HandlerFunc(sH.Patch)))
-	mux.Handle("DELETE /services/{id}", middleware.RequireAPIKey(http.HandlerFunc(sH.Delete)))
-	mux.Handle("DELETE /services/batch", middleware.RequireAPIKey(http.HandlerFunc(sH.DeleteBatch)))
-
-	mux.Handle("POST /providers/batch", middleware.RequireAPIKey(http.HandlerFunc(pH.CreateBatch)))
-	mux.Handle("POST /providers", middleware.RequireAPIKey(http.HandlerFunc(pH.Create)))
-	mux.Handle("PUT /providers/{id}", middleware.RequireAPIKey(http.HandlerFunc(pH.Update)))
-	mux.Handle("PATCH /providers/{id}", middleware.RequireAPIKey(http.HandlerFunc(pH.Patch)))
-	mux.Handle("DELETE /providers/{id}", middleware.RequireAPIKey(http.HandlerFunc(pH.Delete)))
-	mux.Handle("DELETE /providers/batch", middleware.RequireAPIKey(http.HandlerFunc(pH.DeleteBatch)))
+	registerRoutes(mux, sH, pH)
 
 	server := &http.Server{
 		Addr:    ":" + port,
@@ -112,4 +93,35 @@ func main() {
 	}
 
 	log.Printf("Server exited properly")
+}
+
+// registerRoutes sets up all HTTP handlers and applies middleware
+func registerRoutes(mux *http.ServeMux, sH *handler.ServiceHandler, pH *handler.ProviderHandler) {
+	// --- Public Routes (Read-only) ---
+	mux.HandleFunc("GET /services", sH.GetAll)
+	mux.HandleFunc("GET /services/{id}", sH.GetByID)
+	mux.HandleFunc("GET /providers", pH.GetAll)
+	mux.HandleFunc("GET /providers/{id}", pH.GetByID)
+
+	// --- Protected Routes (Write/Delete) ---
+	// Helper to reduce repetition
+	protected := func(method string, path string, handler http.HandlerFunc) {
+		mux.Handle(method+" "+path, middleware.RequireAPIKey(handler))
+	}
+
+	// Services
+	protected("POST", "/services", sH.Create)
+	protected("PUT", "/services/{id}", sH.Update)
+	protected("PATCH", "/services/{id}", sH.Patch)
+	protected("DELETE", "/services/{id}", sH.Delete)
+	protected("POST", "/services/batch", sH.CreateBatch)
+	protected("DELETE", "/services/batch", sH.DeleteBatch)
+
+	// Providers
+	protected("POST", "/providers", pH.Create)
+	protected("PUT", "/providers/{id}", pH.Update)
+	protected("PATCH", "/providers/{id}", pH.Patch)
+	protected("DELETE", "/providers/{id}", pH.Delete)
+	protected("POST", "/providers/batch", pH.CreateBatch)
+	protected("DELETE", "/providers/batch", pH.DeleteBatch)
 }
