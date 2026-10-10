@@ -7,16 +7,14 @@ import (
 	"github.com/im-sanny/service-finder/middleware"
 )
 
-// registerRoutes sets up all HTTP handlers and applies middleware
 func RegisterRoutes(mux *http.ServeMux, sH *handler.ServiceHandler, pH *handler.ProviderHandler) {
-	// --- Public Routes (Read-only) ---
+	// Public Routes (Read-only)
 	mux.HandleFunc("GET /services", sH.GetAll)
 	mux.HandleFunc("GET /services/{id}", sH.GetByID)
 	mux.HandleFunc("GET /providers", pH.GetAll)
 	mux.HandleFunc("GET /providers/{id}", pH.GetByID)
 
-	// --- Protected Routes (Write/Delete) ---
-	// Helper to reduce repetition
+	// Protected Routes (Write/Delete)
 	protected := func(method string, path string, handler http.HandlerFunc) {
 		mux.Handle(method+" "+path, middleware.RequireAPIKey(handler))
 	}
