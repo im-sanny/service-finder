@@ -33,4 +33,24 @@ func (h *UserHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusCreated, response)
 }
 
+func (h *UserHandler) UserLogin(w http.ResponseWriter, r *http.Request) {
+	var loginReq struct {
+		Email    string `json:"email"`
+		Password string `json:"password"`
+	}
 
+	if !decodeJSON(w, r, &loginReq) {
+		return
+	}
+
+	token, err := h.usr.Login(loginReq.Email, loginReq.Password)
+	if err != nil {
+		respondError(w, err)
+		return
+	}
+
+	response := map[string]string{
+		"token": token,
+	}
+	writeJSON(w, http.StatusOK, response)
+}
