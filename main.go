@@ -65,7 +65,16 @@ func main() {
 	pvr := service.NewProvider(providerRepo, serviceRepo)
 	pH := handler.NewProviderHandler(pvr)
 
-	routes.RegisterRoutes(mux, sH, pH)
+	jwtSecret := os.Getenv("JWT_SECRET")
+	if jwtSecret == "" {
+		log.Fatal("JWT_SECRET is not set in .env file")
+	}
+
+	userRepo := repository.NewUserRepository(db)
+	uvr := service.NewAuthService(userRepo, jwtSecret)
+	uH := handler.NewUserHandler(uvr)
+
+	routes.RegisterRoutes(mux, sH, pH, uH)
 
 	server := &http.Server{
 		Addr:    ":" + port,

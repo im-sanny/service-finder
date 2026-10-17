@@ -7,16 +7,20 @@ import (
 	"github.com/im-sanny/service-finder/middleware"
 )
 
-func RegisterRoutes(mux *http.ServeMux, sH *handler.ServiceHandler, pH *handler.ProviderHandler) {
+func RegisterRoutes(mux *http.ServeMux, sH *handler.ServiceHandler, pH *handler.ProviderHandler, uH *handler.UserHandler) {
 	// Public Routes (Read-only)
 	mux.HandleFunc("GET /services", sH.GetAll)
 	mux.HandleFunc("GET /services/{id}", sH.GetByID)
 	mux.HandleFunc("GET /providers", pH.GetAll)
 	mux.HandleFunc("GET /providers/{id}", pH.GetByID)
 
+	// Public Auth Routes
+	mux.HandleFunc("POST /auth/register", uH.CreateUser)
+	mux.HandleFunc("POST /auth/login", uH.UserLogin)
+
 	// Protected Routes (Write/Delete)
 	protected := func(method string, path string, handler http.HandlerFunc) {
-		mux.Handle(method+" "+path, middleware.RequireAPIKey(handler))
+		mux.Handle(method+" "+path, middleware.RequireJWT(handler))
 	}
 
 	// Services
