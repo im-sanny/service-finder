@@ -24,8 +24,10 @@ func NewUserRepository(db *sql.DB) UserRepository {
 func (r *usr) Create(u *model.User) error {
 	err := r.db.QueryRow(`
 	INSERT INTO users (name, email, password_hash)
-	VALUES ($1, $2, $3) RETURNING id, created_at, updated_at`,
-		u.Name, u.Email, u.PasswordHash).Scan(&u.ID, &u.Name, &u.Email, &u.PasswordHash, &u.CreatedAt, &u.UpdatedAt)
+	VALUES ($1, $2, $3)
+	RETURNING id, created_at, updated_at`,
+		u.Name, u.Email, u.PasswordHash,
+	).Scan(&u.ID, &u.CreatedAt, &u.UpdatedAt)
 
 	if err != nil {
 		return fmt.Errorf("failed to create user: %w", err)

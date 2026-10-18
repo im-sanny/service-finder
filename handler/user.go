@@ -21,7 +21,7 @@ func (h *UserHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.usr.Register(u.Name, u.Email, u.PasswordHash); err != nil {
+	if err := h.usr.Register(&u); err != nil {
 		respondError(w, err)
 		return
 	}

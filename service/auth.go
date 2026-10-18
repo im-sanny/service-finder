@@ -11,7 +11,7 @@ import (
 )
 
 type AuthService interface {
-	Register(name, email, password string) error
+	Register(u *model.User) error
 	Login(email, password string) (string, error)
 }
 
@@ -24,27 +24,19 @@ func NewAuthService(userRepo repository.UserRepository, jwtSecret string) AuthSe
 	return &authService{userRepo: userRepo, jwtSecret: jwtSecret}
 }
 
-func (s *authService) Register(name, email, password string) error {
-	// 1. Basic Validation
-	if name == "" || email == "" || password == "" {
-		return fmt.Errorf("name, email, and password are required: %w", ErrInvalidInput)
+func (s *authService) Register(u *model.User) error {
+	// Hash password
+	if u.PasswordHash == "" {
+		return fmt.Errorf("password required: %w", ErrInvalidInput)
 	}
 
-	// 2. Hash the password
-	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	hash, err := bcrypt.GenerateFromPassword([]byte(u.PasswordHash), bcrypt.DefaultCost)
 	if err != nil {
 		return fmt.Errorf("failed to hash password: %w", err)
 	}
+	u.PasswordHash = string(hash)
 
-	// 3. Create the user object
-	user := &model.User{
-		Name:         name,
-		Email:        email,
-		PasswordHash: string(hash),
-	}
-
-	// 4. Save to DB via Repository
-	return s.userRepo.Create(user)
+	return s.userRepo.Create(u)
 }
 
 func (s *authService) Login(email, password string) (string, error) {
