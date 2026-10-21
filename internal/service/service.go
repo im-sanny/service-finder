@@ -5,8 +5,8 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/im-sanny/service-finder/model"
-	"github.com/im-sanny/service-finder/repository"
+	"github.com/im-sanny/service-finder/internal/model"
+	"github.com/im-sanny/service-finder/internal/repository"
 )
 
 // Domain errors shared by all business logic.

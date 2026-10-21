@@ -3,8 +3,8 @@ package routes
 import (
 	"net/http"
 
-	"github.com/im-sanny/service-finder/handler"
-	"github.com/im-sanny/service-finder/middleware"
+	"github.com/im-sanny/service-finder/internal/handler"
+	"github.com/im-sanny/service-finder/internal/middleware"
 )
 
 func RegisterRoutes(mux *http.ServeMux, sH *handler.ServiceHandler, pH *handler.ProviderHandler, uH *handler.UserHandler) {

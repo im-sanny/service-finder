@@ -5,8 +5,9 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/im-sanny/service-finder/model"
-	"github.com/im-sanny/service-finder/repository"
+	// "github.com/im-sanny/service-finder/model"
+	"github.com/im-sanny/service-finder/internal/model"
+	"github.com/im-sanny/service-finder/internal/repository"
 	"golang.org/x/crypto/bcrypt"
 )
 

@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/im-sanny/service-finder/model"
+	"github.com/im-sanny/service-finder/internal/model"
 	"github.com/lib/pq"
 )
 

@@ -11,10 +11,10 @@ import (
 	"time"
 
 	"github.com/im-sanny/service-finder/database"
-	"github.com/im-sanny/service-finder/handler"
-	"github.com/im-sanny/service-finder/repository"
-	"github.com/im-sanny/service-finder/routes"
-	"github.com/im-sanny/service-finder/service"
+	"github.com/im-sanny/service-finder/internal/handler"
+	"github.com/im-sanny/service-finder/internal/repository"
+	"github.com/im-sanny/service-finder/internal/routes"
+	"github.com/im-sanny/service-finder/internal/service"
 	"github.com/joho/godotenv"
 	"github.com/pressly/goose/v3"
 )

@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/im-sanny/service-finder/service"
+	"github.com/im-sanny/service-finder/internal/service"
 )
 
 // getIDFromPath extracts and validates the int64 ID from the URL path.

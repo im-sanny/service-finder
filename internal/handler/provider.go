@@ -5,8 +5,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/im-sanny/service-finder/model"
-	"github.com/im-sanny/service-finder/service"
+	"github.com/im-sanny/service-finder/internal/model"
+	"github.com/im-sanny/service-finder/internal/service"
 )
 
 type ProviderHandler struct {
