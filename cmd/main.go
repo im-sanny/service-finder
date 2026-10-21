@@ -9,8 +9,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/im-sanny/service-finder/database"
 	"github.com/im-sanny/service-finder/internal/config"
+	"github.com/im-sanny/service-finder/internal/database"
 	"github.com/im-sanny/service-finder/internal/handler"
 	"github.com/im-sanny/service-finder/internal/repository"
 	"github.com/im-sanny/service-finder/internal/routes"
@@ -20,7 +20,7 @@ import (
 func main() {
 	cfg, err := config.New()
 	if err != nil {
-		log.Fatal("config: %v", err)
+		log.Fatalf("config: %v", err)
 	}
 
 	db, err := database.Connect(cfg.Database.URL)
@@ -31,7 +31,7 @@ func main() {
 	log.Println("Database connected successfully")
 
 	if err := database.RunMigrations(db); err != nil {
-		log.Fatal("migrations: %v", err)
+		log.Fatalf("migrations: %v", err)
 	}
 
 	mux := http.NewServeMux()
