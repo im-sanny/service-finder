@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"embed"
 	"log"
 	"net/http"
 	"os"
@@ -11,49 +10,29 @@ import (
 	"time"
 
 	"github.com/im-sanny/service-finder/database"
+	"github.com/im-sanny/service-finder/internal/config"
 	"github.com/im-sanny/service-finder/internal/handler"
 	"github.com/im-sanny/service-finder/internal/repository"
 	"github.com/im-sanny/service-finder/internal/routes"
 	"github.com/im-sanny/service-finder/internal/service"
-	"github.com/joho/godotenv"
-	"github.com/pressly/goose/v3"
 )
 
-// 1. THIS LINE IS REQUIRED!
-// It tells Go to bundle all .sql files from the migrations folder into embedMigration.
-//
-//go:embed migrations/*.sql
-var embedMigration embed.FS
-
 func main() {
-	if err := godotenv.Load(); err != nil {
-		log.Println("No .env file found, relying on system environment variables")
-	}
-	conStr := os.Getenv("DB_URL")
-	if conStr == "" {
-		log.Fatal("DB_URL environment variable is not set. Please check your .env file.")
-	}
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
+	cfg, err := config.New()
+	if err != nil {
+		log.Fatal("config: %v", err)
 	}
 
-	db, err := database.Connect(conStr)
+	db, err := database.Connect(cfg.Database.URL)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer db.Close()
 	log.Println("Database connected successfully")
 
-	if err := goose.SetDialect("postgres"); err != nil {
-		log.Fatalf("failed to set goose dialect: %v", err)
+	if err := database.RunMigrations(db); err != nil {
+		log.Fatal("migrations: %v", err)
 	}
-
-	goose.SetBaseFS(embedMigration)
-	if err := goose.Up(db, "migrations"); err != nil {
-		log.Fatalf("failed to run migrations: %v", err)
-	}
-	log.Printf("Database migrations applied successfully!")
 
 	mux := http.NewServeMux()
 
@@ -65,24 +44,19 @@ func main() {
 	pvr := service.NewProvider(providerRepo, serviceRepo)
 	pH := handler.NewProviderHandler(pvr)
 
-	jwtSecret := os.Getenv("JWT_SECRET")
-	if jwtSecret == "" {
-		log.Fatal("JWT_SECRET is not set in .env file")
-	}
-
 	userRepo := repository.NewUserRepository(db)
-	uvr := service.NewAuthService(userRepo, jwtSecret)
+	uvr := service.NewAuthService(userRepo, cfg.Auth.JWTSecret)
 	uH := handler.NewUserHandler(uvr)
 
 	routes.RegisterRoutes(mux, sH, pH, uH)
 
 	server := &http.Server{
-		Addr:    ":" + port,
+		Addr:    ":" + cfg.Server.Port,
 		Handler: mux,
 	}
 
 	go func() {
-		log.Printf("Server running on port :%s", port)
+		log.Printf("Server running on port :%s", cfg.Server.Port)
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatal(err)
 		}
