@@ -106,11 +106,12 @@ service-finder/
 
 ### Providers
 
-| Method | Endpoint           | Description             | Access    |
-| :----- | :----------------- | :---------------------- | :-------- |
-| `GET`  | `/providers`       | Get all providers       | Public    |
-| `POST` | `/providers/batch` | Batch create providers  | Protected |
-| `PUT`  | `/providers/{id}`  | Update provider details | Protected |
+| Method   | Endpoint                   | Description                     | Access    |
+| :------- | :------------------------- | :------------------------------ | :-------- |
+| `GET`    | `/providers`               | Get all providers               | Public    |
+| `POST`   | `/providers/batch`         | Batch create providers          | Protected |
+| `PUT`    | `/providers/{id}`          | Update provider details         | Protected |
+| `DELETE` | `/providers/batch?ids=1,2` | Batch delete multiple providers | Protected |
 
 > **Protected Routes:** Require a valid JWT token in the `Authorization: Bearer <token>` header.
 
